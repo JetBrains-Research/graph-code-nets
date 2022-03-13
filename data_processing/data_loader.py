@@ -4,9 +4,8 @@ import random
 import json
 from random import shuffle
 from glob import glob
+from torch.utils.data import Dataset
 
-# Edge types to be used in the models, and their (renumbered) indices -- the data_processing files contain
-# reserved indices for several edge types that do not occur for this problem (e.g. UNSPECIFIED)
 EDGE_TYPES = {
     'enum_CFG_NEXT': 0,
     'enum_LAST_READ': 1,
@@ -22,20 +21,41 @@ EDGE_TYPES = {
 }
 
 
-class DataLoader():
+class MyDataset(Dataset):
+
+    def __init__(self, data_path, mode):
+        self.data_path = os.path.join(data_path, mode)
+        self.mode = mode
+        self.lines_data = list()
+        files = os.listdir(self.data_path)
+        shuffle(files)
+        for filename in files:
+            with open(os.path.join(self.data_path, filename), 'r') as f:
+                self.lines_data.extend(f.readlines())
+        self.length = len(self.lines_data)
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, index):
+        return self.lines_data[index]
+
+
+class MainDataLoader:
 
     def __init__(self, data_path, data_config, vocabulary):
         self.data_path = data_path
         self.config = data_config
         self.vocabulary = vocabulary
 
+    def batcher(self, mode="train"):
+        dataset = MyDataset(self.data_path, mode)
+        batches_gen = self.to_batch(dataset, mode)
+        return batches_gen
+
     def get_data_path(self, mode):
-        if mode == "train":
-            return os.path.join(self.data_path, "train")
-        elif mode == "dev":
-            return os.path.join(self.data_path, "dev")
-        elif mode == "eval":
-            return os.path.join(self.data_path, "eval")
+        if mode in ("train", "dev", "eval"):
+            return os.path.join(self.data_path, mode)
         else:
             raise ValueError("Mode % not supported for batching; please use \"train\", \"dev\", or \"eval\".")
 
@@ -56,4 +76,47 @@ class DataLoader():
         repair_candidates = [t for t in json_data["repair_candidates"] if isinstance(t, int)]
         return tokens, edges, error_location, repair_targets, repair_candidates
 
+    def to_batch(self, sample_generator, mode):
 
+        if isinstance(mode, bytes): mode = mode.decode('utf-8')
+
+        def sample_len(sample):
+            return len(sample[0])
+
+        # Generates a batch with similarly-sized sequences for efficiency
+        def make_batch(buffer):
+            pivot = sample_len(random.choice(buffer))
+            buffer = sorted(buffer, key=lambda b: abs(sample_len(b) - pivot))
+            batch = []
+            max_seq_len = 0
+            for sample in buffer:
+                max_seq_len = max(max_seq_len, sample_len(sample))
+                if max_seq_len * (len(batch) + 1) > self.config['max_batch_size']:
+                    break
+                batch.append(sample)
+            batch_dim = len(batch)
+            buffer = buffer[batch_dim:]
+            batch = list(zip(*batch))
+            return buffer, (batch[0], batch[1], batch[2], batch[3], batch[4])
+
+
+        # Keep samples in a buffer that is (ideally) much larger than the batch size to allow efficient batching
+        buffer = []
+        num_samples = 0
+
+        for line in sample_generator:
+            json_sample = json.loads(line)
+            sample = self.to_sample(json_sample)
+            if sample_len(sample) > self.config['max_sequence_length']:
+                continue
+            buffer.append(sample)
+            num_samples += 1
+            if mode == 'dev' and num_samples >= self.config['max_valid_samples']:
+                break
+            if sum(sample_len(sample) for _ in buffer) > self.config['max_buffer_size'] * self.config['max_batch_size']:
+                buffer, batch = make_batch(buffer)
+                yield batch
+        # Drain the buffer upon completion
+        while buffer:
+            buffer, batch = make_batch(buffer)
+            yield batch
