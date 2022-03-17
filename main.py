@@ -4,7 +4,7 @@ from data_processing import vocabulary, data_loader
 
 import torch.utils.data.dataset
 
-data_path = 'great'
+data_path = 'data'
 config_path = 'config.yml'
 vocabulary_path = 'vocab.txt'
 

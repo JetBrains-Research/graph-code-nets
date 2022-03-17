@@ -8,8 +8,6 @@ from torch.utils.data import Dataset
 
 import numpy as np
 
-# Edge types to be used in the models, and their (renumbered) indices -- the data files contain
-# reserved indices for several edge types that do not occur for this problem (e.g. UNSPECIFIED)
 EDGE_TYPES = {
     'enum_CFG_NEXT': 0,
     'enum_LAST_READ': 1,
