@@ -1,3 +1,5 @@
+import torch
+
 from wraped_model import VarMisuseLayer
 import yaml
 

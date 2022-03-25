@@ -23,3 +23,11 @@ class VarMisuseLayer(pl.LightningModule):
             self.model = rnn.RNN(join_dicts(base_config, self.config['rnn']), shared_embedding=self.embedding)
         else:
             raise ValueError('Unknown model component provided:', inner_model)
+
+    def forward(self, tokens, token_mask, edges, training):
+        subtoken_embeddings = torch.index_select(self.embedding, 0, tokens)
+        subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1)
+        states = torch.mean(subtoken_embeddings, 2)
+        states = self.model(states, training=training)
+        predictions = torch.transpose(self.prediction(states), 1, 2)
+        return predictions
