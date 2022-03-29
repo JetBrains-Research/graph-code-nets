@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 
 # Based on https://github.com/DongjunLee/transformer-tensorflow/blob/master/transformer/attention.py
@@ -15,3 +16,15 @@ def prefix_sum(arr):
     for a in arr:
         res.append(res[-1] + a)
     return res
+
+
+def sparse_categorical_accuracy(y_true, y_pred):
+    return torch.eq(y_true, torch.argmax(y_pred, -1))
+
+
+def sparse_softmax_cross_entropy_with_logits(error_locations, loc_predictions):
+    input = torch.log_softmax(loc_predictions, 1)
+    input = input.type(torch.FloatTensor)
+    labels = error_locations.type(torch.LongTensor)
+    loss = torch.nn.CrossEntropyLoss(reduce=False)
+    return loss(input, labels)
