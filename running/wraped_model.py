@@ -5,6 +5,7 @@ from models import rnn
 import pytorch_lightning as pl
 from util import sparse_categorical_accuracy, sparse_softmax_cross_entropy_with_logits
 
+
 class VarMisuseLayer(pl.LightningModule):
 
     def __init__(self, model_config, training_config, vocab_dim):
@@ -65,27 +66,29 @@ class VarMisuseLayer(pl.LightningModule):
 
         # Store two metrics: the accuracy at predicting specifically the non-buggy samples correctly (to measure false alarm rate), and the accuracy at detecting the real bugs.
         no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
-                    1e-9 + torch.sum(1 - is_buggy))  # Take mean only on sequences without errors
+                1e-9 + torch.sum(1 - is_buggy))  # Take mean only on sequences without errors
         bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))  # Only on errors
 
         # For repair accuracy, first convert to probabilities, masking out any non-candidate tokens
         pointer_logits = predictions[:, 1]
-        candidate_mask = tf.scatter_nd(repair_candidates, torch.ones(repair_candidates.size()[0]),
-                                       pointer_logits.size())
+        # double check
+        candidate_mask = torch.zeros(pointer_logits.size(), dtype=repair_candidates.dtype). \
+            scatter_(dim=0, index=repair_candidates, src=torch.ones(repair_candidates.size()[0]))
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits)
 
         # Aggregate probabilities at repair targets to get the sum total probability assigned to the correct variable name
-        target_mask = tf.scatter_nd(repair_targets, torch.ones(repair_targets.size()[0]), pointer_probs.size())
+        target_mask = torch.zeros(pointer_probs.size(), dtype=repair_targets.dtype). \
+            scatter_(dim=0, index=repair_targets, src=torch.ones(repair_targets.size()[0]))
         target_probs = torch.sum(target_mask * pointer_probs, -1)
 
         # The loss is only computed at buggy samples, using (negative) cross-entropy
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
-                    1e-9 + torch.sum(is_buggy))  # Only on errors
+                1e-9 + torch.sum(is_buggy))  # Only on errors
 
         # To simplify the comparison, accuracy is computed as achieving >= 50% probability for the top guess
         # (as opposed to the slightly more accurate, but hard to compute quickly, greatest probability among distinct variable names).
-        rep_accs = tf.cast(tf.greater_equal(target_probs, 0.5), 'float32')
+        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor)
         target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))  # Only on errors
 
         # Also store the joint localization and repair accuracy -- arguably the most important metric.
