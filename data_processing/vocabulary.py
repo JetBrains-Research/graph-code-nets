@@ -16,7 +16,6 @@ class Vocabulary:
         self.w2i = {w: ix for ix, w in self.i2w.items()}
         self.vocab_dim = len(self.i2w)
 
-        # Some data_processing structures to split up sub-tokenization
         self.bpe_cache = {}
         self.bpe_lookup_dict = {}
         for token in self.w2i.keys():
@@ -29,7 +28,7 @@ class Vocabulary:
 
     def lookup(self, token):
         return self.w2i[token] if token in self.w2i else self.w2i[
-            "<PAD>"]  # Ignore truly unknown tokens; only happens when specific characters were never seen in training data_processing.
+            "<PAD>"]
 
     def tokenize(self, token):
         token += "#"  # Add terminal symbol first
@@ -46,7 +45,6 @@ class Vocabulary:
                 if not candidates:
                     top_candidate = token[ix]
                 else:
-                    # Only sub-tokens that match the next characters and don't leave the end-of-word marker left by itself
                     candidates = [t for t in candidates if
                                   t == token[ix:ix + len(t)] and not len(token) == ix + len(t) + 1]
                     if not candidates:

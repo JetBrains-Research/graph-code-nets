@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 import os
-from graph_dataset import GraphDataset
+from data_processing.graph_dataset import GraphDataset
 from torch.utils.data import DataLoader
 
 
@@ -27,11 +27,12 @@ class MyDataLoader(pl.LightningDataModule):
             self.test = GraphDataset(data_path=self.data_path, vocabulary=self.vocabulary, config=self.config,
                                      mode='eval')
 
+    # it doesn't support batching right now, because of dataset ;(
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=32)
+        return DataLoader(self.train, batch_size=1)
 
     def val_dataloader(self):
-        return DataLoader(self.val, batch_size=32)
+        return DataLoader(self.val, batch_size=1)
 
     def test_dataloader(self):
-        return DataLoader(self.test, batch_size=32)
+        return DataLoader(self.test, batch_size=1)
