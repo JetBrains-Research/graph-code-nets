@@ -1,9 +1,9 @@
-import util
+import running.util as util
 import torch
 import torch.nn.functional as F
 from models import rnn
 import pytorch_lightning as pl
-from util import sparse_categorical_accuracy, sparse_softmax_cross_entropy_with_logits
+from running.util import sparse_categorical_accuracy, sparse_softmax_cross_entropy_with_logits
 
 
 class VarMisuseLayer(pl.LightningModule):
