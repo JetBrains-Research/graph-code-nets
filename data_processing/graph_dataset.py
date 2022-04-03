@@ -1,12 +1,10 @@
 import os
 import random
-
 import json
-
 import torch
-from torch.utils.data import Dataset
-
 import numpy as np
+from torch.utils.data import Dataset
+from data_processing.vocabulary import Vocabulary
 
 EDGE_TYPES = {
     'enum_CFG_NEXT': 0,
@@ -25,35 +23,35 @@ EDGE_TYPES = {
 
 class GraphDataset(Dataset):
 
-    def __init__(self, data_path, vocabulary, config, mode, debug=False):
-        self.data_path = os.path.join(data_path, mode)
-        self.vocabulary = vocabulary
-        self.config = config
-        self.mode = mode
-        self.lines_data = list()
-        files = os.listdir(self.data_path)
+    def __init__(self, data_path: str, vocabulary: Vocabulary, config: object, mode: str, debug: bool = False):
+        self._data_path = os.path.join(data_path, mode)
+        self._vocabulary = vocabulary
+        self._config = config
+        self._mode = mode
+        self._lines_data = list()
+        files = os.listdir(self._data_path)
         if not debug:
             random.shuffle(files)
         for filename in files:
-            with open(os.path.join(self.data_path, filename), 'r') as f:
-                self.lines_data.extend(f.readlines())
-        self.length = len(self.lines_data)
+            with open(os.path.join(self._data_path, filename), 'r') as f:
+                self._lines_data.extend(f.readlines())
+        self.length = len(self._lines_data)
 
     def __len__(self):
         return self.length
 
-    def __getitem__(self, index):
-        return self.process_line(self.lines_data[index])
+    def __getitem__(self, index: int):
+        return self.process_line(self._lines_data[index])
 
-    def to_raw_sample(self, json_data):
+    def _to_raw_sample(self, json_data: dict):
 
-        def parse_edges(edges):
+        def parse_edges(edges: list):
             relations = [[2 * EDGE_TYPES[rel[3]], rel[0], rel[1]] for rel in edges if rel[
                 3] in EDGE_TYPES]
             relations += [[rel[0] + 1, rel[2], rel[1]] for rel in relations]
             return relations
 
-        tokens = [self.vocabulary.translate(t)[:self.config["data"]["max_token_length"]] for t in
+        tokens = [self._vocabulary.translate(t)[:self._config["data"]["max_token_length"]] for t in
                   json_data["source_tokens"]]
         edges = parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
@@ -61,10 +59,10 @@ class GraphDataset(Dataset):
         repair_candidates = [t for t in json_data["repair_candidates"] if isinstance(t, int)]
         return tokens, edges, error_location, repair_targets, repair_candidates
 
-    def process_tokens(self, tokens):
-        tokens = list(map(lambda x: list(np.pad(x, (0, self.config["data"]["max_token_length"] - len(x)))), tokens))
+    def _process_tokens(self, tokens: list):
+        tokens = list(map(lambda x: list(np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))), tokens))
         return torch.Tensor(tokens)
 
-    def process_line(self, line):
-        tokens, edges, error_location, repair_targets, repair_candidates = self.to_raw_sample(json.loads(line))
-        return self.process_tokens(tokens), edges, error_location, repair_targets, repair_candidates
+    def process_line(self, line: str):
+        tokens, edges, error_location, repair_targets, repair_candidates = self._to_raw_sample(json.loads(line))
+        return self._process_tokens(tokens), edges, error_location, repair_targets, repair_candidates
