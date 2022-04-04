@@ -3,22 +3,24 @@ import random
 import json
 import torch
 import numpy as np
+from collections import namedtuple
 from torch.utils.data import Dataset
 from data_processing.vocabulary import Vocabulary
+from enum import Enum
 
-EDGE_TYPES = {
-    'enum_CFG_NEXT': 0,
-    'enum_LAST_READ': 1,
-    'enum_LAST_WRITE': 2,
-    'enum_COMPUTED_FROM': 3,
-    'enum_RETURNS_TO': 4,
-    'enum_FORMAL_ARG_NAME': 5,
-    'enum_FIELD': 6,
-    'enum_SYNTAX': 7,
-    'enum_NEXT_SYNTAX': 8,
-    'enum_LAST_LEXICAL_USE': 9,
-    'enum_CALLS': 10
-}
+
+class EdgeTypes(Enum):
+    enum_CFG_NEXT = 0
+    enum_LAST_READ = 1
+    enum_LAST_WRITE = 2
+    enum_COMPUTED_FROM = 3
+    enum_RETURNS_TO = 4
+    enum_FORMAL_ARG_NAME = 5
+    enum_FIELD = 6
+    enum_SYNTAX = 7
+    enum_NEXT_SYNTAX = 8
+    enum_LAST_LEXICAL_USE = 9
+    enum_CALLS = 10
 
 
 class GraphDataset(Dataset):
@@ -45,21 +47,26 @@ class GraphDataset(Dataset):
 
     def _to_raw_sample(self, json_data: dict):
 
+        # edges is list of [before_index, after_index, edge_type, edge_type_name]
         def parse_edges(edges: list):
-            relations = [[2 * EDGE_TYPES[rel[3]], rel[0], rel[1]] for rel in edges if rel[
-                3] in EDGE_TYPES]
+            relations = [
+                [2 * EdgeTypes[rel[3]].value, rel[0], rel[1]]
+                for rel in edges
+            ]
             relations += [[rel[0] + 1, rel[2], rel[1]] for rel in relations]
             return relations
 
-        tokens = [self._vocabulary.translate(t)[:self._config["data"]["max_token_length"]] for t in
-                  json_data["source_tokens"]]
+        tokens = [
+            self._vocabulary.translate(t)[:self._config["data"]["max_token_length"]]
+            for t in json_data["source_tokens"]
+        ]
         edges = parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
         repair_candidates = [t for t in json_data["repair_candidates"] if isinstance(t, int)]
         return tokens, edges, error_location, repair_targets, repair_candidates
 
-    def _process_tokens(self, tokens: list):
+    def _process_tokens(self, tokens: list) -> torch.Tensor:
         tokens = list(map(lambda x: list(np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))), tokens))
         return torch.Tensor(tokens)
 

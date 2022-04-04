@@ -5,7 +5,7 @@ from data_processing.vocabulary import Vocabulary
 from torch.utils.data import DataLoader
 
 
-class MyDataLoader(pl.LightningDataModule):
+class GraphDataModule(pl.LightningDataModule):
 
     def __init__(self, data_path: str, vocabulary: Vocabulary, config: object):
         super().__init__()
@@ -29,11 +29,11 @@ class MyDataLoader(pl.LightningDataModule):
                                       mode='eval')
 
     # it doesn't support batching right now, because of dataset ;(
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return DataLoader(self._train, batch_size=1)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return DataLoader(self._val, batch_size=1)
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> DataLoader:
         return DataLoader(self._test, batch_size=1)
