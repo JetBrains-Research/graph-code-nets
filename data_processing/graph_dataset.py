@@ -7,6 +7,7 @@ from collections import namedtuple
 from torch.utils.data import Dataset
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
+from commode_utils.filesystem import get_lines_offsets, get_line_by_offset
 
 
 class EdgeTypes(Enum):
@@ -24,6 +25,8 @@ class EdgeTypes(Enum):
 
 
 class GraphDataset(Dataset):
+    _return_list = namedtuple('return_list',
+                              ['tokens', 'edges', 'error_location', 'repair_targets', 'repair_candidates'])
 
     def __init__(self, data_path: str, vocabulary: Vocabulary, config: object, mode: str, debug: bool = False):
         self._data_path = os.path.join(data_path, mode)
@@ -31,6 +34,7 @@ class GraphDataset(Dataset):
         self._config = config
         self._mode = mode
         self._lines_data = list()
+        a = get_lines_offsets(self._data_path + '/' + mode + '__VARIABLE_MISUSE__SStuB.txt-00000-of-00300')
         files = os.listdir(self._data_path)
         if not debug:
             random.shuffle(files)
@@ -45,7 +49,7 @@ class GraphDataset(Dataset):
     def __getitem__(self, index: int):
         return self.process_line(self._lines_data[index])
 
-    def _to_raw_sample(self, json_data: dict):
+    def _to_raw_sample(self, json_data: dict) -> namedtuple:
 
         # edges is list of [before_index, after_index, edge_type, edge_type_name]
         def parse_edges(edges: list):
@@ -64,12 +68,15 @@ class GraphDataset(Dataset):
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
         repair_candidates = [t for t in json_data["repair_candidates"] if isinstance(t, int)]
-        return tokens, edges, error_location, repair_targets, repair_candidates
+        return self._return_list(tokens, edges, error_location, repair_targets, repair_candidates)
 
     def _process_tokens(self, tokens: list) -> torch.Tensor:
         tokens = list(map(lambda x: list(np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))), tokens))
         return torch.Tensor(tokens)
 
-    def process_line(self, line: str):
-        tokens, edges, error_location, repair_targets, repair_candidates = self._to_raw_sample(json.loads(line))
-        return self._process_tokens(tokens), edges, error_location, repair_targets, repair_candidates
+    def process_line(self, line: str) -> namedtuple:
+        return_values = self._to_raw_sample(json.loads(line))
+        tokens, edges, error_location, repair_targets, repair_candidates = \
+            return_values.tokens, return_values.edges, return_values.error_location, return_values.repair_targets, \
+            return_values.repair_candidates
+        return self._return_list(self._process_tokens(tokens), edges, error_location, repair_targets, repair_candidates)
