@@ -7,7 +7,8 @@ from collections import namedtuple
 from torch.utils.data import Dataset
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
-from commode_utils.filesystem import get_lines_offsets, get_line_by_offset
+from commode_utils.filesystem import get_line_by_offset
+from data_processing.commde_utils_extension import get_files_count_lines, get_files_offsets, get_file_index
 
 
 class EdgeTypes(Enum):
@@ -34,7 +35,9 @@ class GraphDataset(Dataset):
         self._config = config
         self._mode = mode
         self._lines_data = list()
-        a = get_lines_offsets(self._data_path + '/' + mode + '__VARIABLE_MISUSE__SStuB.txt-00000-of-00300')
+        self._data_files = os.listdir(self._data_path)
+        self._files_offsets = get_files_offsets(self._data_path)
+        self._count_lines = get_files_count_lines(self._data_path)
         files = os.listdir(self._data_path)
         if not debug:
             random.shuffle(files)
@@ -47,7 +50,9 @@ class GraphDataset(Dataset):
         return self.length
 
     def __getitem__(self, index: int):
-        return self.process_line(self._lines_data[index])
+        file_index, line_index = get_file_index(self._count_lines, index)
+        file_offset = self._files_offsets[file_index][line_index]
+        return self.process_line(get_line_by_offset(os.path.join(self._data_path, self._data_files[file_index]), file_offset))
 
     def _to_raw_sample(self, json_data: dict) -> namedtuple:
 

@@ -18,12 +18,12 @@ def get_files_count_lines(data_dir: str) -> list:
     return files_count_lines
 
 
-def get_file_index(files_count_lines: list, index: int) -> int:
-    l, r = int(0), int(files_count_lines[-1])
-    while r - l > 1:
-        m = int((l + r) / 2)
-        if files_count_lines[m] <= index:
-            l = m
+def get_file_index(files_count_lines: list, index: int) -> (int, int):
+    left_bound, right_bound = int(0), len(files_count_lines)
+    while right_bound - left_bound > 1:
+        mid_bound = int((left_bound + right_bound) / 2)
+        if files_count_lines[mid_bound] <= index:
+            left_bound = mid_bound
         else:
-            r = m
-    return l
+            right_bound = mid_bound
+    return left_bound, index - files_count_lines[left_bound]
