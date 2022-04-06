@@ -27,19 +27,22 @@ class VarMisuseLayer(pl.LightningModule):
         else:
             raise ValueError('Unknown model component provided:', inner_model)
 
-    def forward(self, tokens, token_mask, edges, training):
+    def forward(self, tokens, token_mask, edges):
+        tokens = tokens.type(torch.LongTensor).flatten()
         subtoken_embeddings = torch.index_select(self.embedding, 0, tokens)
         subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1)
-        states = torch.mean(subtoken_embeddings, 2)
-        states = self.model(states, training=training)
-        predictions = torch.transpose(self.prediction(states), 1, 2)
-        return predictions
+        states = self.model(subtoken_embeddings)
+        print(states)
+        #predictions = self.prediction(states)
+        #print(predictions)
+        #return predictions
+        return torch.tensor((0, 1))
 
     def training_step(self, batch, batch_idx):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
 
-        pointer_preds = self(tokens, token_mask, edges, training=True)
+        pointer_preds = self(tokens, token_mask, edges)
         ls, acs = self.get_loss(pointer_preds, token_mask, error_loc, repair_targets, repair_candidates)
         loss = sum(ls)
         return loss
@@ -56,6 +59,8 @@ class VarMisuseLayer(pl.LightningModule):
     # probably there are lots of bugs here right now...
     def get_loss(self, predictions, token_mask, error_locations, repair_targets, repair_candidates):
         seq_mask = token_mask.float()
+        print(seq_mask)
+        print(seq_mask.size())
         predictions += (1.0 - torch.unsqueeze(seq_mask, 1)) * torch.finfo(torch.float32).min
         is_buggy = torch.clamp(error_locations, 0, 1).float()
 

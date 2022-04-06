@@ -7,3 +7,6 @@ class RNN(pl.LightningModule):
     def __init__(self, model_config, shared_embedding=None, vocab_dim=None):
         super().__init__()
         self.config = model_config
+
+    def forward(self, states):
+        return torch.tensor((0, 1))
