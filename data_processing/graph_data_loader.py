@@ -3,11 +3,12 @@ import os
 from data_processing.graph_dataset import GraphDataset
 from data_processing.vocabulary import Vocabulary
 from torch.utils.data import DataLoader
+from typing import Dict
 
 
 class GraphDataModule(pl.LightningDataModule):
 
-    def __init__(self, data_path: str, vocabulary: Vocabulary, config: object):
+    def __init__(self, data_path: str, vocabulary: Vocabulary, config: Dict):
         super().__init__()
         self._data_path = os.path.join(data_path)
         self._vocabulary = vocabulary

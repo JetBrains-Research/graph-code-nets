@@ -1,9 +1,9 @@
 import os
-import random
 import json
 import torch
 import numpy as np
 from collections import namedtuple
+from typing import Dict
 from torch.utils.data import Dataset
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
@@ -26,31 +26,22 @@ class EdgeTypes(Enum):
 
 
 class GraphDataset(Dataset):
-    _return_list = namedtuple('return_list',
-                              ['tokens', 'edges', 'error_location', 'repair_targets', 'repair_candidates'])
 
-    def __init__(self, data_path: str, vocabulary: Vocabulary, config: object, mode: str, debug: bool = False):
+    def __init__(self, data_path: str, vocabulary: Vocabulary, config: Dict, mode: str, debug: bool = False):
         self._data_path = os.path.join(data_path, mode)
         self._vocabulary = vocabulary
         self._config = config
         self._mode = mode
-        self._lines_data = list()
         self._data_files = os.listdir(self._data_path)
-        self._files_offsets = get_files_offsets(self._data_path)
-        self._count_lines = get_files_count_lines(self._data_path)
-        files = os.listdir(self._data_path)
-        if not debug:
-            random.shuffle(files)
-        for filename in files:
-            with open(os.path.join(self._data_path, filename), 'r') as f:
-                self._lines_data.extend(f.readlines())
-        self.length = len(self._lines_data)
+        self._files_offsets = get_files_offsets(self._data_path, debug)
+        self._pref_sum_lines = get_files_count_lines(self._data_path)
+        self._length = self._pref_sum_lines[-1]
 
     def __len__(self):
-        return self.length
+        return self._length
 
     def __getitem__(self, index: int):
-        file_index, line_index = get_file_index(self._count_lines, index)
+        file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
         return self.process_line(get_line_by_offset(os.path.join(self._data_path, self._data_files[file_index]), file_offset))
 
@@ -73,15 +64,12 @@ class GraphDataset(Dataset):
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
         repair_candidates = [t for t in json_data["repair_candidates"] if isinstance(t, int)]
-        return self._return_list(tokens, edges, error_location, repair_targets, repair_candidates)
+        return tokens, edges, error_location, repair_targets, repair_candidates
 
     def _process_tokens(self, tokens: list) -> torch.Tensor:
         tokens = list(map(lambda x: list(np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))), tokens))
         return torch.Tensor(tokens)
 
     def process_line(self, line: str) -> namedtuple:
-        return_values = self._to_raw_sample(json.loads(line))
-        tokens, edges, error_location, repair_targets, repair_candidates = \
-            return_values.tokens, return_values.edges, return_values.error_location, return_values.repair_targets, \
-            return_values.repair_candidates
-        return self._return_list(self._process_tokens(tokens), edges, error_location, repair_targets, repair_candidates)
+        tokens, edges, error_location, repair_targets, repair_candidates = self._to_raw_sample(json.loads(line))
+        return self._process_tokens(tokens), edges, error_location, repair_targets, repair_candidates
