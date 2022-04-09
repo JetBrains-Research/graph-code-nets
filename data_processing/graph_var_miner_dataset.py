@@ -21,11 +21,7 @@ _graph_var_miner_edge_types = ['NextToken',
                                'FormalArgName',
                                'GuardedBy',
                                'GuardedByNegation',
-                               'LastLexicalUse',
-                               'AssignableTo',
-                               'AssociatedToken',
-                               'HasType',
-                               'AssociatedSymbol']
+                               'LastLexicalUse']
 _graph_var_miner_edge_types.extend(list(map(lambda s: f"reversed{s}", _graph_var_miner_edge_types)))
 
 GraphVarMinerEdgeType = Enum('GraphVarMinerEdgeType', _graph_var_miner_edge_types)
