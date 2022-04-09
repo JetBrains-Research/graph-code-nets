@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from enum import Enum, EnumMeta
+from enum import Enum
 from typing import Any, TypeVar
 
 from torch.utils.data import Dataset
 
-T_E = TypeVar('T_E', bound=EnumMeta)
+T_E = TypeVar('T_E', bound=Enum)
 
 
 class GraphDatasetItemBase(ABC):
