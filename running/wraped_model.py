@@ -1,3 +1,5 @@
+import numpy as np
+
 import running.util as util
 import torch
 import torch.nn.functional as F
@@ -28,20 +30,23 @@ class VarMisuseLayer(pl.LightningModule):
             raise ValueError('Unknown model component provided:', inner_model)
 
     def forward(self, tokens, token_mask, edges):
-        tokens = tokens.type(torch.LongTensor).flatten()
-        subtoken_embeddings = torch.index_select(self.embedding, 0, tokens)
+        original_shape = list(np.append(np.array(tokens.shape), self.model_config['base']['hidden_dim']))
+        flat_tokens = tokens.type(torch.LongTensor).flatten()
+        subtoken_embeddings = torch.index_select(self.embedding, 0, flat_tokens)
+        subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
         subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1)
-        states = self.model(subtoken_embeddings)
+        states = torch.mean(subtoken_embeddings, 2)
+        # have to understand why it's needed
+        states += self.pos_enc[:states.shape[1]]
         print(states)
-        #predictions = self.prediction(states)
-        #print(predictions)
-        #return predictions
+        # states = self.model(states)
         return torch.tensor((0, 1))
 
     def training_step(self, batch, batch_idx):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
+        #for e in batch:
+        #    print(e)
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
-
         pointer_preds = self(tokens, token_mask, edges)
         ls, acs = self.get_loss(pointer_preds, token_mask, error_loc, repair_targets, repair_candidates)
         loss = sum(ls)
@@ -59,8 +64,6 @@ class VarMisuseLayer(pl.LightningModule):
     # probably there are lots of bugs here right now...
     def get_loss(self, predictions, token_mask, error_locations, repair_targets, repair_candidates):
         seq_mask = token_mask.float()
-        print(seq_mask)
-        print(seq_mask.size())
         predictions += (1.0 - torch.unsqueeze(seq_mask, 1)) * torch.finfo(torch.float32).min
         is_buggy = torch.clamp(error_locations, 0, 1).float()
 
