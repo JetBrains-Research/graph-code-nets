@@ -1,5 +1,4 @@
 import numpy as np
-
 import running.util as util
 import torch
 import torch.nn.functional as F
@@ -36,16 +35,15 @@ class VarMisuseLayer(pl.LightningModule):
         subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
         subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1)
         states = torch.mean(subtoken_embeddings, 2)
-        # have to understand why it's needed
+        # have to understand why the following line is needed
         states += self.pos_enc[:states.shape[1]]
-        print(states)
-        # states = self.model(states)
-        return torch.tensor((0, 1))
+        states = self.model(states)
+        #print(states)
+        #print(states.shape)
+        return states
 
     def training_step(self, batch, batch_idx):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
-        #for e in batch:
-        #    print(e)
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
         ls, acs = self.get_loss(pointer_preds, token_mask, error_loc, repair_targets, repair_candidates)
