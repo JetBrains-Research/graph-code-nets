@@ -6,7 +6,7 @@ data_path = 'data'
 config_path = 'config.yml'
 vocabulary_path = 'vocab.txt'
 
-mode = 'test'
+mode = 'train'
 config = yaml.safe_load(open(config_path))
 vocab = vocabulary.Vocabulary(vocab_path='vocab.txt')
 
@@ -16,8 +16,5 @@ dl.prepare_data()
 dl.setup('fit')
 
 for batch in dl.train_dataloader():
-    print(batch)
-
-for sample in dataset:
-    tokens, edges, error_loc, repair_targets, repair_candidates = sample
-    print(tokens, edges, error_loc, repair_targets, repair_candidates, sep='\n')
+    for e in batch:
+        print(e)

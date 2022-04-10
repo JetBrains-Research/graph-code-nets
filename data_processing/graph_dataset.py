@@ -1,8 +1,5 @@
 import os
 import json
-import torch
-import numpy as np
-from collections import namedtuple
 from typing import Dict
 from torch.utils.data import Dataset
 from data_processing.vocabulary import Vocabulary
@@ -45,7 +42,7 @@ class GraphDataset(Dataset):
         file_offset = self._files_offsets[file_index][line_index]
         return self.process_line(get_line_by_offset(os.path.join(self._data_path, self._data_files[file_index]), file_offset))
 
-    def _to_raw_sample(self, json_data: dict) -> namedtuple:
+    def _to_raw_sample(self, json_data: dict) -> tuple:
 
         # edges is list of [before_index, after_index, edge_type, edge_type_name]
         def parse_edges(edges: list):
@@ -66,10 +63,6 @@ class GraphDataset(Dataset):
         repair_candidates = [t for t in json_data["repair_candidates"] if isinstance(t, int)]
         return tokens, edges, error_location, repair_targets, repair_candidates
 
-    def _process_tokens(self, tokens: list) -> torch.Tensor:
-        tokens = list(map(lambda x: list(np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))), tokens))
-        return torch.Tensor(tokens)
-
-    def process_line(self, line: str) -> namedtuple:
+    def process_line(self, line: str) -> tuple:
         tokens, edges, error_location, repair_targets, repair_candidates = self._to_raw_sample(json.loads(line))
-        return self._process_tokens(tokens), edges, error_location, repair_targets, repair_candidates
+        return tokens, edges, error_location, repair_targets, repair_candidates
