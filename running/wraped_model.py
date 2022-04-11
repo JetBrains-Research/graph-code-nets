@@ -79,7 +79,6 @@ class VarMisuseLayer(pl.LightningModule):
 
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits, dim=0)
-
         target_mask = np.zeros(pointer_probs.size())
         for e in repair_targets:
             candidate_mask[e[0]][e[1]] = 1
