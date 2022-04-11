@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 class Vocabulary:
     def __init__(self, vocab_path):
         self.bpe_lookup_dict = None
@@ -17,10 +19,8 @@ class Vocabulary:
         self.vocab_dim = len(self.i2w)
 
         self.bpe_cache = {}
-        self.bpe_lookup_dict = {}
+        self.bpe_lookup_dict = defaultdict(set)
         for token in self.w2i.keys():
-            if token[:2] not in self.bpe_lookup_dict:
-                self.bpe_lookup_dict[token[:2]] = set()
             self.bpe_lookup_dict[token[:2]].add(token)
 
     def translate(self, token, is_subtokenized=False):
