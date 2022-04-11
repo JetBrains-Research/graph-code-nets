@@ -1,3 +1,4 @@
 pytorch~=1.11.0
 pytorch-lightning~=1.6.0
 commode-utils~=0.4.2
+black~=22.3.0
