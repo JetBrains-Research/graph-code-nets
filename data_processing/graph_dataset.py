@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
 from commode_utils.filesystem import get_line_by_offset
-from data_processing.commde_utils_extension import (
+from data_processing.commode_utils_extension import (
     get_files_count_lines,
     get_files_offsets,
     get_file_index,
