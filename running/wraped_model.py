@@ -37,10 +37,8 @@ class VarMisuseLayer(pl.LightningModule):
         states = torch.mean(subtoken_embeddings, 2)
         # have to understand why the following line is needed
         states += self.pos_enc[:states.shape[1]]
-        states = self.model(states)
-        #print(states)
-        #print(states.shape)
-        return states
+        predictions = torch.transpose(self.model(states), 1, 2)
+        return predictions
 
     def training_step(self, batch, batch_idx):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
@@ -64,26 +62,29 @@ class VarMisuseLayer(pl.LightningModule):
         seq_mask = token_mask.float()
         predictions += (1.0 - torch.unsqueeze(seq_mask, 1)) * torch.finfo(torch.float32).min
         is_buggy = torch.clamp(error_locations, 0, 1).float()
-
         loc_predictions = predictions[:, 0]
-        # double check
-        loc_loss = sparse_categorical_accuracy(error_locations, loc_predictions)
+        loc_loss = sparse_softmax_cross_entropy_with_logits(error_locations, loc_predictions)
         loc_loss = torch.mean(loc_loss)
-        loc_accs = sparse_softmax_cross_entropy_with_logits(error_locations, loc_predictions)
-
+        loc_accs = sparse_categorical_accuracy(error_locations, loc_predictions)
         no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
                 1e-9 + torch.sum(1 - is_buggy))
         bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))
-
         pointer_logits = predictions[:, 1]
         # double check
-        candidate_mask = torch.zeros(pointer_logits.size(), dtype=repair_candidates.dtype). \
-            scatter_(dim=0, index=repair_candidates, src=torch.ones(repair_candidates.size()[0]))
+
+        candidate_mask = np.zeros(pointer_logits.size())
+        for e in repair_candidates:
+            candidate_mask[e[0]][e[1]] = 1
+        candidate_mask = torch.tensor(candidate_mask)
+
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits)
 
-        target_mask = torch.zeros(pointer_probs.size(), dtype=repair_targets.dtype). \
-            scatter_(dim=0, index=repair_targets, src=torch.ones(repair_targets.size()[0]))
+        target_mask = np.zeros(pointer_probs.size())
+        for e in repair_targets:
+            candidate_mask[e[0]][e[1]] = 1
+        target_mask = torch.tensor(target_mask)
+
         target_probs = torch.sum(target_mask * pointer_probs, -1)
 
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
