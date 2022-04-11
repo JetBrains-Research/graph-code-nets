@@ -73,7 +73,7 @@ class GraphDataset(Dataset):
             self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
-        tokens = self._process_tokens(tokens)
+        tokens_tensor = self._process_tokens(tokens)
         edges = parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
@@ -82,13 +82,13 @@ class GraphDataset(Dataset):
         ]
         return {
             "edges": edges,
-            "tokens": tokens,
+            "tokens": tokens_tensor,
             "error_location": error_location,
             "repair_targets": repair_targets,
             "repair_candidates": repair_candidates,
         }
 
-    def _process_tokens(self, tokens: list) -> torch.Tensor:
+    def _process_tokens(self, tokens: List) -> torch.Tensor:
         tokens = list(
             map(
                 lambda x: list(

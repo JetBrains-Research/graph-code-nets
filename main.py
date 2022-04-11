@@ -18,5 +18,5 @@ dl.setup("fit")
 for batch in dl.train_dataloader():
     print(batch)
 
-for sample in dataset:
+for sample in dataset:  # type: ignore[attr-defined]
     print(sample, sep="\n")

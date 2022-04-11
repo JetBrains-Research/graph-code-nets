@@ -3,7 +3,7 @@ import os
 from data_processing.graph_dataset import GraphDataset
 from data_processing.vocabulary import Vocabulary
 from torch.utils.data import DataLoader
-from typing import Dict
+from typing import Dict, Tuple, Optional
 
 
 class GraphDataModule(pl.LightningDataModule):
@@ -12,7 +12,9 @@ class GraphDataModule(pl.LightningDataModule):
         self._data_path = os.path.join(data_path)
         self._vocabulary = vocabulary
         self._config = config
-        self._train, self._val, self._test = None, None, None
+        self._train: GraphDataset
+        self._val: GraphDataset
+        self._test: GraphDataset
 
     def prepare_data(self):
         pass
