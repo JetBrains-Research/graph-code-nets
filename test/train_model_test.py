@@ -15,4 +15,4 @@ data.setup('fit')
 model = VarMisuseLayer(config['model'], config['training'], vocab.vocab_dim)
 
 trainer = pl.Trainer()
-trainer.fit(model=model, train_dataloaders=data.train_dataloader())
+trainer.fit(model=model, train_dataloaders=data.train_dataloader(), val_dataloaders=data.val_dataloader())

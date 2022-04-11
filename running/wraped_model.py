@@ -49,7 +49,12 @@ class VarMisuseLayer(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        pass
+        tokens, edges, error_loc, repair_targets, repair_candidates = batch
+        token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
+        pointer_preds = self(tokens, token_mask, edges)
+        ls, acs = self.get_loss(pointer_preds, token_mask, error_loc, repair_targets, repair_candidates)
+        loss = sum(ls)
+        return loss
 
     def test_step(self, batch, batch_idx):
         pass
@@ -70,8 +75,8 @@ class VarMisuseLayer(pl.LightningModule):
                 1e-9 + torch.sum(1 - is_buggy))
         bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))
         pointer_logits = predictions[:, 1]
-        # double check
 
+        # maybe there is an appropriate function in pytorch for that
         candidate_mask = np.zeros(pointer_logits.size())
         for e in repair_candidates:
             candidate_mask[e[0]][e[1]] = 1
@@ -79,6 +84,7 @@ class VarMisuseLayer(pl.LightningModule):
 
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits, dim=0)
+
         target_mask = np.zeros(pointer_probs.size())
         for e in repair_targets:
             candidate_mask[e[0]][e[1]] = 1
