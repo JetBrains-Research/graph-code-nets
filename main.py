@@ -19,5 +19,4 @@ for batch in dl.train_dataloader():
     print(batch)
 
 for sample in dataset:
-    tokens, edges, error_loc, repair_targets, repair_candidates = sample
-    print(tokens, edges, error_loc, repair_targets, repair_candidates, sep='\n')
+    print(sample, sep='\n')
