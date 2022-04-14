@@ -2,7 +2,7 @@ import os
 import json
 import torch
 import numpy as np
-from typing import Dict, List, Tuple, Any
+from typing import Any
 from torch.utils.data import Dataset
 
 from data_processing.vocabulary import Vocabulary
@@ -34,7 +34,7 @@ class GraphDataset(Dataset):
         self,
         data_path: str,
         vocabulary: Vocabulary,
-        config: Dict,
+        config: dict,
         mode: str,
         debug: bool = False,
     ):
@@ -59,10 +59,10 @@ class GraphDataset(Dataset):
             )
         )
 
-    def _parse_line(self, json_data: dict) -> Dict[str, Any]:
+    def _parse_line(self, json_data: dict) -> dict[str, Any]:
 
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
-        def parse_edges(edges: list) -> List[Tuple[int, int, int]]:
+        def parse_edges(edges: list) -> list[tuple[int, int, int]]:
             # Every edge type splits into two edges: forward (2 * type) and backward (2 * type + 1)
             relations = [
                 (2 * EdgeTypes[rel[3]].value, rel[0], rel[1]) for rel in edges
@@ -88,7 +88,7 @@ class GraphDataset(Dataset):
             "repair_candidates": repair_candidates,
         }
 
-    def _process_tokens(self, tokens: List) -> torch.Tensor:
+    def _process_tokens(self, tokens: list) -> torch.Tensor:
         tokens = list(
             map(
                 lambda x: list(
@@ -99,5 +99,5 @@ class GraphDataset(Dataset):
         )
         return torch.Tensor(tokens)
 
-    def process_line(self, line: str) -> Dict[str, Any]:
+    def process_line(self, line: str) -> dict[str, Any]:
         return self._parse_line(json.loads(line))

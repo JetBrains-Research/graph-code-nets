@@ -1,6 +1,5 @@
 import os
 import random
-from typing import List, Tuple
 
 from commode_utils.filesystem import get_lines_offsets, count_lines_in_file
 from bisect import bisect_left
@@ -25,6 +24,6 @@ def get_files_count_lines(data_dir: str) -> list:
     return files_pref_sum_lines
 
 
-def get_file_index(files_count_lines: List, index: int) -> Tuple[int, int]:
+def get_file_index(files_count_lines: list, index: int) -> tuple[int, int]:
     left_bound = bisect_left(files_count_lines, index)
     return left_bound, index - files_count_lines[left_bound]
