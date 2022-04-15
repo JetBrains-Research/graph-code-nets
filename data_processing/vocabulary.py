@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+
 class Vocabulary:
     def __init__(self, vocab_path):
         self.bpe_lookup_dict = None
@@ -9,7 +12,7 @@ class Vocabulary:
         self.load_vocab()
 
     def load_vocab(self):
-        with open(self.vocab_path, encoding='utf-8') as f:
+        with open(self.vocab_path, encoding="utf-8") as f:
             subtokens = [l.rstrip() for l in f]
         self.i2w = {ix + 1: w for ix, w in enumerate(subtokens)}
         self.i2w[0] = "<PAD>"
@@ -17,18 +20,19 @@ class Vocabulary:
         self.vocab_dim = len(self.i2w)
 
         self.bpe_cache = {}
-        self.bpe_lookup_dict = {}
+        self.bpe_lookup_dict = defaultdict(set)
         for token in self.w2i.keys():
-            if token[:2] not in self.bpe_lookup_dict:
-                self.bpe_lookup_dict[token[:2]] = set()
             self.bpe_lookup_dict[token[:2]].add(token)
 
     def translate(self, token, is_subtokenized=False):
-        return self.lookup(token) if is_subtokenized else [self.lookup(t) for t in self.tokenize(token)]
+        return (
+            self.lookup(token)
+            if is_subtokenized
+            else [self.lookup(t) for t in self.tokenize(token)]
+        )
 
     def lookup(self, token):
-        return self.w2i[token] if token in self.w2i else self.w2i[
-            "<PAD>"]
+        return self.w2i[token] if token in self.w2i else self.w2i["<PAD>"]
 
     def tokenize(self, token):
         token += "#"  # Add terminal symbol first
@@ -41,12 +45,16 @@ class Vocabulary:
                 tokens.append(token[ix:])
                 break
             else:
-                candidates = self.bpe_lookup_dict.get(token[ix:ix + 2], [])
+                candidates = self.bpe_lookup_dict.get(token[ix : ix + 2], [])
                 if not candidates:
                     top_candidate = token[ix]
                 else:
-                    candidates = [t for t in candidates if
-                                  t == token[ix:ix + len(t)] and not len(token) == ix + len(t) + 1]
+                    candidates = [
+                        t
+                        for t in candidates
+                        if t == token[ix : ix + len(t)]
+                        and not len(token) == ix + len(t) + 1
+                    ]
                     if not candidates:
                         top_candidate = token[ix]
                     else:

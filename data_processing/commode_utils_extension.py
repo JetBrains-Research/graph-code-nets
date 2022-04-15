@@ -24,6 +24,6 @@ def get_files_count_lines(data_dir: str) -> list:
     return files_pref_sum_lines
 
 
-def get_file_index(files_count_lines: list, index: int) -> (int, int):
+def get_file_index(files_count_lines: list, index: int) -> tuple[int, int]:
     left_bound = bisect_left(files_count_lines, index)
     return left_bound, index - files_count_lines[left_bound]
