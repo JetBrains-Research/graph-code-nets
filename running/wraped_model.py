@@ -45,6 +45,9 @@ class VarMisuseLayer(pl.LightningModule):
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
         ls, acs = self.get_loss(pointer_preds, token_mask, error_loc, repair_targets, repair_candidates)
+        #with open("/home/timav/graph-code-nets/test/out.txt", 'a') as f:
+        #    f.write(str(ls))
+        #    f.write('\n')
         loss = sum(ls)
         return loss
 
