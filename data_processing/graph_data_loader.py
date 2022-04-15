@@ -3,33 +3,45 @@ import os
 from data_processing.graph_dataset import GraphDataset
 from data_processing.vocabulary import Vocabulary
 from torch.utils.data import DataLoader
-from typing import Dict
 import torch
 import numpy as np
 
 
 class GraphDataModule(pl.LightningDataModule):
-
-    def __init__(self, data_path: str, vocabulary: Vocabulary, config: Dict):
+    def __init__(self, data_path: str, vocabulary: Vocabulary, config: dict):
         super().__init__()
         self._data_path = os.path.join(data_path)
         self._vocabulary = vocabulary
         self._config = config
-        self._train, self._val, self._test, self._debug = None, None, None, None
+        self._train: GraphDataset
+        self._val: GraphDataset
+        self._test: GraphDataset
 
     def prepare_data(self):
         pass
 
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:
-            self._train = GraphDataset(data_path=self._data_path, vocabulary=self._vocabulary, config=self._config,
-                                       mode='train')
-            self._val = GraphDataset(data_path=self._data_path, vocabulary=self._vocabulary, config=self._config,
-                                     mode='dev')
+            self._train = GraphDataset(
+                data_path=self._data_path,
+                vocabulary=self._vocabulary,
+                config=self._config,
+                mode="dev",
+            )
+            self._val = GraphDataset(
+                data_path=self._data_path,
+                vocabulary=self._vocabulary,
+                config=self._config,
+                mode="dev",
+            )
 
-        if stage == "test":
-            self._test = GraphDataset(data_path=self._data_path, vocabulary=self._vocabulary, config=self._config,
-                                      mode='eval')
+        if stage == "test" or stage is None:
+            self._test = GraphDataset(
+                data_path=self._data_path,
+                vocabulary=self._vocabulary,
+                config=self._config,
+                mode="eval",
+            )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(self._train, batch_size=16, collate_fn=self._collate_fn)
