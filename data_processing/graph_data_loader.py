@@ -44,45 +44,92 @@ class GraphDataModule(pl.LightningDataModule):
             )
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self._train, batch_size=16, collate_fn=self._collate_fn, num_workers=16)
+        return DataLoader(
+            self._train, batch_size=16, collate_fn=self._collate_fn, num_workers=16
+        )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self._val, batch_size=16, collate_fn=self._collate_fn, num_workers=16)
+        return DataLoader(
+            self._val, batch_size=16, collate_fn=self._collate_fn, num_workers=16
+        )
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self._test, batch_size=16, collate_fn=self._collate_fn, num_workers=16)
+        return DataLoader(
+            self._test, batch_size=16, collate_fn=self._collate_fn, num_workers=16
+        )
 
     def _collate_fn(self, batch):
-        batch = [(e['tokens'], e['edges'], e['error_location'], e['repair_targets'], e['repair_candidates']) for e in batch]
+        batch = [
+            (
+                e["tokens"],
+                e["edges"],
+                e["error_location"],
+                e["repair_targets"],
+                e["repair_candidates"],
+            )
+            for e in batch
+        ]
         batch_dim = len(batch)
         batch = list(zip(*batch))
         # padding
-        tokens = [list(map(lambda x: list(np.pad(x, (0,
-                                                     self._config["data"]["max_token_length"] - len(x)))), y)) for y in
-                  batch[0]]
-        new_tokens = np.zeros((len(tokens), max([len(x) for x in tokens]), self._config["data"]["max_token_length"]),
-                              dtype=int)
+        tokens = [
+            list(
+                map(
+                    lambda x: list(
+                        np.pad(
+                            x, (0, self._config["data"]["max_token_length"] - len(x))
+                        )
+                    ),
+                    y,
+                )
+            )
+            for y in batch[0]
+        ]
+        new_tokens = np.zeros(
+            (
+                len(tokens),
+                max([len(x) for x in tokens]),
+                self._config["data"]["max_token_length"],
+            ),
+            dtype=int,
+        )
         for i in range(len(tokens)):
-            new_tokens[i][:len(tokens[i])] = tokens[i]
+            new_tokens[i][: len(tokens[i])] = tokens[i]
         token_tensor = torch.tensor(new_tokens)
 
         # adding batch dimension
-        edge_batches = torch.tensor(np.repeat(np.arange(0, batch_dim), [len(edges) for edges in batch[1]]))
+        edge_batches = torch.tensor(
+            np.repeat(np.arange(0, batch_dim), [len(edges) for edges in batch[1]])
+        )
         edge_tensor = torch.tensor(np.concatenate(batch[1]))
-        edge_tensor = torch.stack([edge_tensor[:, 0], edge_batches, edge_tensor[:, 1], edge_tensor[:, 2]], dim=1)
+        edge_tensor = torch.stack(
+            [edge_tensor[:, 0], edge_batches, edge_tensor[:, 1], edge_tensor[:, 2]],
+            dim=1,
+        )
 
         # simple constant list
         error_location = torch.tensor(batch[2])
 
         # also adding batch dimensions
-        target_batches = torch.tensor(np.repeat(np.arange(0, batch_dim), [len(targets) for targets in batch[3]]))
+        target_batches = torch.tensor(
+            np.repeat(np.arange(0, batch_dim), [len(targets) for targets in batch[3]])
+        )
         repair_targets = torch.tensor(np.concatenate(batch[3]))
         repair_targets = torch.stack([target_batches, repair_targets], dim=1)
         repair_targets = repair_targets.to(torch.long)
 
         candidates_batches = torch.tensor(
-            np.repeat(np.arange(0, batch_dim), [len(candidates) for candidates in batch[4]]))
+            np.repeat(
+                np.arange(0, batch_dim), [len(candidates) for candidates in batch[4]]
+            )
+        )
         repair_candidates = torch.tensor(np.concatenate(batch[4]))
         repair_candidates = torch.stack([candidates_batches, repair_candidates], dim=1)
 
-        return token_tensor, edge_tensor, error_location, repair_targets, repair_candidates
+        return (
+            token_tensor,
+            edge_tensor,
+            error_location,
+            repair_targets,
+            repair_candidates,
+        )

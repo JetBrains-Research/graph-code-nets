@@ -6,7 +6,7 @@ data_path = "data"
 config_path = "config.yml"
 vocabulary_path = "vocab.txt"
 
-mode = 'train'
+mode = "train"
 config = yaml.safe_load(open(config_path))
 vocab = vocabulary.Vocabulary(vocab_path="vocab.txt")
 
