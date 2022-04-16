@@ -116,19 +116,16 @@ class VarMisuseLayer(pl.LightningModule):
         candidate_mask = torch.tensor(candidate_mask)
 
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
-        pointer_probs = F.softmax(pointer_logits, dim=0)
-
+        pointer_probs = F.softmax(pointer_logits, dim=-1)
         target_mask = np.zeros(pointer_probs.size())
         for e in repair_targets:
-            candidate_mask[e[0]][e[1]] = 1
+            target_mask[e[0]][e[1]] = 1
         target_mask = torch.tensor(target_mask)
 
         target_probs = torch.sum(target_mask * pointer_probs, -1)
-
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
             1e-9 + torch.sum(is_buggy)
         )
-
         rep_accs = (target_probs >= 0.5).type(torch.FloatTensor)
         target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
 

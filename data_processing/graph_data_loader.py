@@ -22,12 +22,11 @@ class GraphDataModule(pl.LightningDataModule):
 
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:
-
             self._train = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev",
+                mode="train",
             )
             self._val = GraphDataset(
                 data_path=self._data_path,
