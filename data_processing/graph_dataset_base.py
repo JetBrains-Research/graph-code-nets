@@ -1,26 +1,26 @@
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import Enum, EnumMeta
 from typing import Any, TypeVar
 
 from torch.utils.data import Dataset
 
-T_E = TypeVar('T_E', bound=Enum)
+EdgeType = TypeVar("EdgeType", bound=EnumMeta)
 
 
 class GraphDatasetItemBase(ABC):
-    def __init__(self, nodes: list[Any], edges: list[list[Enum, int, int]]):
+    def __init__(self, nodes: list[Any], edges: list[tuple[Enum, int, int]]):
         self.nodes = nodes
         self.edges = edges
 
     @abstractmethod
-    def get_edges_types(self) -> T_E:
+    def get_edges_types(self) -> EdgeType:
         ...
 
 
-T_G = TypeVar('T_G', bound=GraphDatasetItemBase)
+GraphDatasetItem = TypeVar("GraphDatasetItem", bound=GraphDatasetItemBase)
 
 
 class GraphDatasetBase(Dataset, ABC):
     @abstractmethod
-    def __getitem__(self, index: int) -> T_G:
+    def __getitem__(self, index: int) -> GraphDatasetItem:
         ...

@@ -10,31 +10,43 @@ import ijson
 import torch
 from torch.utils.data import IterableDataset
 
-from data_processing.graph_dataset_base import GraphDatasetBase, GraphDatasetItemBase, T_E, T_G
+from data_processing.graph_dataset_base import (
+    GraphDatasetBase,
+    GraphDatasetItemBase,
+    EdgeType,
+    GraphDatasetItem,
+)
 
-_graph_var_miner_edge_types = ['NextToken',
-                               'Child',
-                               'LastWrite',
-                               'LastUse',
-                               'ComputedFrom',
-                               'ReturnsTo',
-                               'FormalArgName',
-                               'GuardedBy',
-                               'GuardedByNegation',
-                               'LastLexicalUse']
-_graph_var_miner_edge_types.extend(list(map(lambda s: f"reversed{s}", _graph_var_miner_edge_types)))
+_graph_var_miner_edge_types = [
+    "NextToken",
+    "Child",
+    "LastWrite",
+    "LastUse",
+    "ComputedFrom",
+    "ReturnsTo",
+    "FormalArgName",
+    "GuardedBy",
+    "GuardedByNegation",
+    "LastLexicalUse",
+]
+_graph_var_miner_edge_types.extend(
+    list(map(lambda s: f"reversed{s}", _graph_var_miner_edge_types))
+)
 
-GraphVarMinerEdgeType = Enum('GraphVarMinerEdgeType', _graph_var_miner_edge_types)
+# see https://github.com/python/mypy/issues/5317
+GraphVarMinerEdgeType = Enum("GraphVarMinerEdgeType", _graph_var_miner_edge_types)  # type: ignore
 
 
 class GraphVarMinerItem(GraphDatasetItemBase):
-    def __init__(self,
-                 filename: str,
-                 nodes: list[Any],
-                 edges: list[list[Enum, int, int]],
-                 name: str,
-                 types: list[str],
-                 span: tuple[int, int]):
+    def __init__(
+        self,
+        filename: str,
+        nodes: list[Any],
+        edges: list[tuple[Enum, int, int]],
+        name: str,
+        types: list[str],
+        span: tuple[int, int],
+    ):
         super().__init__(nodes, edges)
         self.filename = filename
         self.name = name  # name of the observed variable
@@ -43,21 +55,24 @@ class GraphVarMinerItem(GraphDatasetItemBase):
 
     @classmethod
     def from_dict(cls, dct):
-        nodes = list(dct['ContextGraph']['NodeLabels'].values())  # ignoring indices
+        nodes = list(dct["ContextGraph"]["NodeLabels"].values())  # ignoring indices
         edges = []
-        for edges_typed_group in dct['ContextGraph']['Edges'].items():
+        for edges_typed_group in dct["ContextGraph"]["Edges"].items():
             edges_type = GraphVarMinerEdgeType[edges_typed_group[0]]
-            edges.extend(map(lambda l: [edges_type] + l, edges_typed_group[1]))
+            edges.extend(map(lambda l: (edges_type, l[0], l[1]), edges_typed_group[1]))
 
-        return cls(dct['filename'],
-                   nodes,
-                   edges,
-                   dct['name'],
-                   dct['types'],
-                   ast.literal_eval(dct['span']))
+        return cls(
+            dct["filename"],
+            nodes,
+            edges,
+            dct["name"],
+            dct["types"],
+            ast.literal_eval(dct["span"]),
+        )
 
-    def get_edges_types(self) -> T_E:
-        return GraphVarMinerEdgeType
+    def get_edges_types(self) -> EdgeType:
+        # mypy is unable to determine the type of dynamically created Enum
+        return GraphVarMinerEdgeType  # type: ignore
 
 
 class GraphVarMinerDataset(GraphDatasetBase, IterableDataset):
@@ -69,17 +84,19 @@ class GraphVarMinerDataset(GraphDatasetBase, IterableDataset):
 
     def _items_from_file(self, filename):
         if self.debug:
-            print(f'Hi i am worker #{torch.utils.data.get_worker_info().id}, reading {filename}')
+            print(
+                f"Hi i am worker #{torch.utils.data.get_worker_info().id}, reading {filename}"
+            )
         full_filename = os.path.join(self._data_path, filename)
-        f = gzip.open(full_filename, 'r')
-        return map(GraphVarMinerItem.from_dict, ijson.items(f, 'item'))
+        f = gzip.open(full_filename, "r")
+        return map(GraphVarMinerItem.from_dict, ijson.items(f, "item"))
 
     # might be implemented, but might be very inefficient due to
     # gzip streaming (__getitem__ requires random access) and json decoding
-    def __getitem__(self, index: int) -> T_G:
+    def __getitem__(self, index: int) -> GraphDatasetItem:
         raise NotImplementedError
 
-    def __iter__(self) -> Iterator[T_G]:
+    def __iter__(self) -> Iterator[GraphDatasetItem]:
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
             files_slice = self._data_files
