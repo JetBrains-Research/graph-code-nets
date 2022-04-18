@@ -2,13 +2,17 @@ import os
 import json
 import torch
 import numpy as np
-from collections import namedtuple
-from typing import Dict
+from typing import Any
 from torch.utils.data import Dataset
+
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
 from commode_utils.filesystem import get_line_by_offset
-from data_processing.commde_utils_extension import get_files_count_lines, get_files_offsets, get_file_index
+from data_processing.commode_utils_extension import (
+    get_files_count_lines,
+    get_files_offsets,
+    get_file_index,
+)
 
 
 class EdgeTypes(Enum):
@@ -26,8 +30,14 @@ class EdgeTypes(Enum):
 
 
 class GraphDataset(Dataset):
-
-    def __init__(self, data_path: str, vocabulary: Vocabulary, config: Dict, mode: str, debug: bool = False):
+    def __init__(
+        self,
+        data_path: str,
+        vocabulary: Vocabulary,
+        config: dict,
+        mode: str,
+        debug: bool = False,
+    ):
         self._data_path = os.path.join(data_path, mode)
         self._vocabulary = vocabulary
         self._config = config
@@ -43,33 +53,51 @@ class GraphDataset(Dataset):
     def __getitem__(self, index: int):
         file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
-        return self.process_line(get_line_by_offset(os.path.join(self._data_path, self._data_files[file_index]), file_offset))
+        return self.process_line(
+            get_line_by_offset(
+                os.path.join(self._data_path, self._data_files[file_index]), file_offset
+            )
+        )
 
-    def _to_raw_sample(self, json_data: dict) -> namedtuple:
+    def _parse_line(self, json_data: dict) -> dict[str, Any]:
 
-        # edges is list of [before_index, after_index, edge_type, edge_type_name]
-        def parse_edges(edges: list):
+        # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
+        def parse_edges(edges: list) -> list[tuple[int, int, int]]:
+            # Every edge type splits into two edges: forward (2 * type) and backward (2 * type + 1)
             relations = [
-                [2 * EdgeTypes[rel[3]].value, rel[0], rel[1]]
-                for rel in edges
-            ]
-            relations += [[rel[0] + 1, rel[2], rel[1]] for rel in relations]
+                (2 * EdgeTypes[rel[3]].value, rel[0], rel[1]) for rel in edges
+            ] + [(2 * EdgeTypes[rel[3]].value + 1, rel[1], rel[0]) for rel in edges]
             return relations
 
         tokens = [
-            self._vocabulary.translate(t)[:self._config["data"]["max_token_length"]]
+            self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
+        tokens_tensor = self._process_tokens(tokens)
         edges = parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
-        repair_candidates = [t for t in json_data["repair_candidates"] if isinstance(t, int)]
-        return tokens, edges, error_location, repair_targets, repair_candidates
+        repair_candidates = [
+            t for t in json_data["repair_candidates"] if isinstance(t, int)
+        ]
+        return {
+            "edges": edges,
+            "tokens": tokens_tensor,
+            "error_location": error_location,
+            "repair_targets": repair_targets,
+            "repair_candidates": repair_candidates,
+        }
 
     def _process_tokens(self, tokens: list) -> torch.Tensor:
-        tokens = list(map(lambda x: list(np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))), tokens))
+        tokens = list(
+            map(
+                lambda x: list(
+                    np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
+                ),
+                tokens,
+            )
+        )
         return torch.Tensor(tokens)
 
-    def process_line(self, line: str) -> namedtuple:
-        tokens, edges, error_location, repair_targets, repair_candidates = self._to_raw_sample(json.loads(line))
-        return self._process_tokens(tokens), edges, error_location, repair_targets, repair_candidates
+    def process_line(self, line: str) -> dict[str, Any]:
+        return self._parse_line(json.loads(line))
