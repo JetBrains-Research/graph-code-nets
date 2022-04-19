@@ -2,7 +2,7 @@ import numpy as np
 import running.util as util
 import torch
 import torch.nn.functional as F
-from models import rnn
+from models import linear, rnn
 import pytorch_lightning as pl
 from running.util import (
     sparse_categorical_accuracy,
@@ -22,7 +22,6 @@ class VarMisuseLayer(pl.LightningModule):
             std=self.model_config["base"]["hidden_dim"] ** -0.5,
             size=[self.vocab_dim, self.model_config["base"]["hidden_dim"]],
         )
-        self.prediction = torch.nn.Linear(self.model_config["base"]["hidden_dim"], 2)
         self.pos_enc = util.positional_encoding(
             self.model_config["base"]["hidden_dim"], 5000
         )
@@ -30,6 +29,7 @@ class VarMisuseLayer(pl.LightningModule):
         join_dicts = lambda d1, d2: {**d1, **d2}
         base_config = self.model_config["base"]
         inner_model = self.model_config["configuration"]
+        self.prediction = linear.Linear(base_config)
         if inner_model == "rnn":
             self.model = rnn.RNN(
                 join_dicts(base_config, self.model_config["rnn"]),
@@ -49,7 +49,7 @@ class VarMisuseLayer(pl.LightningModule):
         states = torch.mean(subtoken_embeddings, 2)
         # have to understand why the following line is needed
         # states += self.pos_enc[:states.shape[1]]
-        predictions = torch.transpose(self.model(states), 1, 2)
+        predictions = torch.transpose(self.prediction(self.model(states)[1]), 1, 2)
         return predictions
 
     def training_step(self, batch, batch_idx):

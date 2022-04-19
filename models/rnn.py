@@ -8,8 +8,14 @@ class RNN(pl.LightningModule):
         self.hidden_dim = model_config["hidden_dim"]
         self.num_layers = model_config["num_layers"]
         self.dropout_rate = model_config["dropout_rate"]
-        self.layer = torch.nn.Linear(self.hidden_dim, 2)
+        self.rnn = torch.nn.GRU(
+            input_size=self.hidden_dim,
+            hidden_size=self.hidden_dim,
+            num_layers=self.num_layers,
+            batch_first=True,
+            dropout=self.dropout_rate,
+            bidirectional=True,
+        )
 
     def forward(self, states):
-        # just two different linear layers, which have different input features
-        return self.layer(states)
+        return self.rnn(states)
