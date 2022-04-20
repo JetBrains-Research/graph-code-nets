@@ -14,5 +14,5 @@ data.prepare_data()
 data.setup("fit")
 model = VarMisuseLayer(config["model"], config["training"], vocab.vocab_dim)
 
-trainer = pl.Trainer()
-trainer.fit(model=model, train_dataloaders=data.train_dataloader())
+trainer = pl.Trainer(accelerator='gpu', devices=1, log_every_n_steps=500, max_epochs=10)
+trainer.fit(model=model, train_dataloaders=data.train_dataloader(), val_dataloaders=data.val_dataloader())

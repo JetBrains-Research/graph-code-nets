@@ -8,6 +8,7 @@ from running.util import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
 )
+import gc
 
 
 class VarMisuseLayer(pl.LightningModule):
@@ -21,7 +22,7 @@ class VarMisuseLayer(pl.LightningModule):
             mean=0,
             std=self.model_config["base"]["hidden_dim"] ** -0.5,
             size=[self.vocab_dim, self.model_config["base"]["hidden_dim"]],
-        )
+        ).cuda()
         self.pos_enc = util.positional_encoding(
             self.model_config["base"]["hidden_dim"], 5000
         )
@@ -42,17 +43,18 @@ class VarMisuseLayer(pl.LightningModule):
         original_shape = list(
             np.append(np.array(tokens.shape), self.model_config["base"]["hidden_dim"])
         )
-        flat_tokens = tokens.type(torch.LongTensor).flatten()
+        flat_tokens = tokens.type(torch.LongTensor).flatten().cuda()
         subtoken_embeddings = torch.index_select(self.embedding, 0, flat_tokens)
         subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
-        subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1)
+        subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1).cuda()
         states = torch.mean(subtoken_embeddings, 2)
         # have to understand why the following line is needed
         # states += self.pos_enc[:states.shape[1]]
-        predictions = torch.transpose(self.prediction(self.model(states)[1]), 1, 2)
+        predictions = torch.transpose(self.prediction(self.model(states)[0]), 1, 2)
         return predictions
 
     def training_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
@@ -113,20 +115,20 @@ class VarMisuseLayer(pl.LightningModule):
         candidate_mask = np.zeros(pointer_logits.size())
         for e in repair_candidates:
             candidate_mask[e[0]][e[1]] = 1
-        candidate_mask = torch.tensor(candidate_mask)
+        candidate_mask = torch.tensor(candidate_mask).cuda()
 
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits, dim=-1)
         target_mask = np.zeros(pointer_probs.size())
         for e in repair_targets:
             target_mask[e[0]][e[1]] = 1
-        target_mask = torch.tensor(target_mask)
+        target_mask = torch.tensor(target_mask).cuda()
 
         target_probs = torch.sum(target_mask * pointer_probs, -1)
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
             1e-9 + torch.sum(is_buggy)
         )
-        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor)
+        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).cuda()
         target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
 
         joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (

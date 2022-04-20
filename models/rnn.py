@@ -10,7 +10,7 @@ class RNN(pl.LightningModule):
         self.dropout_rate = model_config["dropout_rate"]
         self.rnn = torch.nn.GRU(
             input_size=self.hidden_dim,
-            hidden_size=self.hidden_dim,
+            hidden_size=self.hidden_dim // 2,
             num_layers=self.num_layers,
             batch_first=True,
             dropout=self.dropout_rate,
