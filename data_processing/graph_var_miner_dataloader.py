@@ -2,8 +2,8 @@ import os
 from typing import Any
 
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
-from torch.utils.data.dataset import Dataset
+from torch_geometric.data import Dataset
+from torch_geometric.loader import DataLoader
 
 from data_processing.graph_var_miner_dataset import GraphVarMinerDataset
 
@@ -14,9 +14,9 @@ def identity(x):
 
 
 class GraphVarMinerModule(pl.LightningDataModule):
-    def __init__(self, data_path: str):
+    def __init__(self, root: str):
         super().__init__()
-        self._data_path = os.path.join(data_path)
+        self._root = os.path.join(root)
         self._train: Dataset[Any]
         self._val: Dataset[Any]
         self._test: Dataset[Any]
@@ -26,13 +26,13 @@ class GraphVarMinerModule(pl.LightningDataModule):
 
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:
-            self._train = GraphVarMinerDataset(data_path=self._data_path, mode="train")
+            self._train = GraphVarMinerDataset(root=self._root, mode="train")
             self._val = GraphVarMinerDataset(
-                data_path=self._data_path, mode="validation"
+                root=self._root, mode="validation"
             )
 
         if stage == "test" or stage is None:
-            self._test = GraphVarMinerDataset(data_path=self._data_path, mode="test")
+            self._test = GraphVarMinerDataset(root=self._root, mode="test")
 
     # shuffle is not supported due to IterableDataset
     def train_dataloader(self) -> DataLoader:
