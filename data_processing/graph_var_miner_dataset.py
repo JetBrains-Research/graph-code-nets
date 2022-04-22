@@ -30,7 +30,16 @@ _graph_var_miner_edge_types.extend(
 
 
 class GraphVarMinerDataset(Dataset):
-    def __init__(self, root: str, mode: str, *, transform=None, pre_transform=None, pre_filter=None, debug=False):
+    def __init__(
+        self,
+        root: str,
+        mode: str,
+        *,
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
+        debug=False,
+    ):
         self._mode = mode
 
         self._raw_data_path = pathlib.Path(root, mode)
@@ -44,7 +53,9 @@ class GraphVarMinerDataset(Dataset):
         self.__info_cfg: dict[str, Any]
         self.__bisection_index: list[int]
 
-        self._data_files: list[pathlib.Path] = [f for f in self._raw_data_path.iterdir() if f.is_file()]
+        self._data_files: list[pathlib.Path] = [
+            f for f in self._raw_data_path.iterdir() if f.is_file()
+        ]
         self._debug = debug
 
         super().__init__(root, transform, pre_transform, pre_filter)
@@ -64,9 +75,9 @@ class GraphVarMinerDataset(Dataset):
         if self.__bisection_index is None:
             info_cfg = self._info_cfg()
             self.__bisection_index = [0]
-            for file in info_cfg['files']:
+            for file in info_cfg["files"]:
                 prev = self.__bisection_index[-1]
-                self.__bisection_index.append(prev + file['count'])
+                self.__bisection_index.append(prev + file["count"])
 
         return self.__bisection_index
 
@@ -75,14 +86,14 @@ class GraphVarMinerDataset(Dataset):
         bisection_index = self._bisection_index()
 
         data_dir_idx = bisect.bisect_right(bisection_index, idx) - 1
-        if len(info_cfg['files']) < data_dir_idx:
-            raise ValueError('Index out of range')
+        if len(info_cfg["files"]) < data_dir_idx:
+            raise ValueError("Index out of range")
 
-        data_dir_info = info_cfg['files'][data_dir_idx]
-        data_dir_name = data_dir_info['name']
+        data_dir_info = info_cfg["files"][data_dir_idx]
+        data_dir_name = data_dir_info["name"]
 
         rel_item_idx = idx - bisection_index[data_dir_idx]
-        rel_item_name = f'{rel_item_idx}.pt'
+        rel_item_name = f"{rel_item_idx}.pt"
 
         return self._proc_data_path.joinpath(data_dir_name, rel_item_name)
 
@@ -104,9 +115,9 @@ class GraphVarMinerDataset(Dataset):
     #         )
 
     def _item_from_dict(self, dct) -> Data:
-        filename = dct['filename']
-        name = dct['filename']
-        types = dct['types']
+        filename = dct["filename"]
+        name = dct["filename"]
+        types = dct["types"]
         return Data(filename=filename, name=name, types=types)
 
     def _items_from_file(self, filename):
@@ -129,13 +140,16 @@ class GraphVarMinerDataset(Dataset):
         return [str(self._proc_cfg_data_path)]
 
     def process(self):
-        info_cfg = {'raw_data_path': str(self._raw_data_path),
-                    'proc_data_path': str(self._proc_data_path),
-                    'mode': self._mode,
-                    'total_count': 0, 'files': []}
+        info_cfg = {
+            "raw_data_path": str(self._raw_data_path),
+            "proc_data_path": str(self._proc_data_path),
+            "mode": self._mode,
+            "total_count": 0,
+            "files": [],
+        }
 
         for (i, data_file) in enumerate(self._data_files):
-            info = {'name': str(data_file.name)}
+            info = {"name": str(data_file.name)}
 
             items = self._items_from_file(data_file)
             data_dir = self._proc_data_path.joinpath(data_file.name)
@@ -145,20 +159,21 @@ class GraphVarMinerDataset(Dataset):
                 item_path = data_dir.joinpath(f"{j}.pt")
                 torch.save(item, str(item_path))
                 counter += 1
-            info['count'] = counter
-            info_cfg['files'].append(info)
-            info_cfg['total_count'] += counter
-            print(f'{data_file} done!!!')
+            info["count"] = counter
+            info_cfg["files"].append(info)
+            info_cfg["total_count"] += counter
+            print(f"{data_file} done!!!")
 
         self._save_info_cfg(info_cfg)
 
     def len(self) -> int:
-        return self._info_cfg()['total_count']
+        return self._info_cfg()["total_count"]
 
     def get(self, idx: int) -> Data:
-        with self._filename_by_idx(idx).open('rb') as f:
+        with self._filename_by_idx(idx).open("rb") as f:
             item = torch.load(f)
         return item
+
 
 # class GraphVarMinerItem(torch_geometric.data.Dataset):
 #     def __init__(

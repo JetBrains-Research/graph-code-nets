@@ -27,9 +27,7 @@ class GraphVarMinerModule(pl.LightningDataModule):
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:
             self._train = GraphVarMinerDataset(root=self._root, mode="train")
-            self._val = GraphVarMinerDataset(
-                root=self._root, mode="validation"
-            )
+            self._val = GraphVarMinerDataset(root=self._root, mode="validation")
 
         if stage == "test" or stage is None:
             self._test = GraphVarMinerDataset(root=self._root, mode="test")
