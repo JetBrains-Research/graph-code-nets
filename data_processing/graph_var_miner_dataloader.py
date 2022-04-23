@@ -9,14 +9,18 @@ from data_processing.graph_var_miner_dataset import GraphVarMinerDataset
 
 
 # DataLoader expects output to be tensor, but yet they are GraphDatasetItemBase, so we need collate_fn
+from data_processing.vocabulary import Vocabulary
+
+
 def identity(x):
     return x
 
 
 class GraphVarMinerModule(pl.LightningDataModule):
-    def __init__(self, root: str):
+    def __init__(self, root: str, vocabulary: Vocabulary):
         super().__init__()
         self._root = os.path.join(root)
+        self._vocabulary = vocabulary
         self._train: Dataset[Any]
         self._val: Dataset[Any]
         self._test: Dataset[Any]
@@ -26,11 +30,11 @@ class GraphVarMinerModule(pl.LightningDataModule):
 
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:
-            self._train = GraphVarMinerDataset(root=self._root, mode="train")
-            self._val = GraphVarMinerDataset(root=self._root, mode="validation")
+            self._train = GraphVarMinerDataset(root=self._root, mode="train", vocabulary=self._vocabulary)
+            self._val = GraphVarMinerDataset(root=self._root, mode="validation", vocabulary=self._vocabulary)
 
         if stage == "test" or stage is None:
-            self._test = GraphVarMinerDataset(root=self._root, mode="test")
+            self._test = GraphVarMinerDataset(root=self._root, mode="test", vocabulary=self._vocabulary)
 
     # shuffle is not supported due to IterableDataset
     def train_dataloader(self) -> DataLoader:
