@@ -12,7 +12,14 @@ vocab = vocabulary.Vocabulary(vocab_path=vocabulary_path)
 data = graph_data_loader.GraphDataModule(data_path, vocab, config)
 data.prepare_data()
 data.setup("fit")
+# data.setup("test")
 model = VarMisuseLayer(config["model"], config["training"], vocab.vocab_dim)
 
-trainer = pl.Trainer(accelerator='gpu', devices=1, log_every_n_steps=500, max_epochs=10)
-trainer.fit(model=model, train_dataloaders=data.train_dataloader(), val_dataloaders=data.val_dataloader())
+trainer = pl.Trainer(accelerator="gpu", devices=1, max_epochs=2, val_check_interval=0.2)
+trainer.fit(
+    model=model,
+    train_dataloaders=data.train_dataloader(),
+    val_dataloaders=data.val_dataloader(),
+)
+# trainer.validate(model=model, dataloaders=data.val_dataloader())
+# trainer.test(model=model, dataloaders=data.test_dataloader())

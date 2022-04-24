@@ -8,7 +8,6 @@ from running.util import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
 )
-import gc
 
 
 class VarMisuseLayer(pl.LightningModule):
@@ -61,9 +60,6 @@ class VarMisuseLayer(pl.LightningModule):
         ls, acs = self.get_loss(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
-        # with open("/home/timav/graph-code-nets/test/out.txt", 'a') as f:
-        #    f.write(str(ls))
-        #    f.write('\n')
         loss = sum(ls)
         return loss
 
@@ -75,10 +71,12 @@ class VarMisuseLayer(pl.LightningModule):
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
         loss = sum(ls)
+        self.log("val_loss", loss, prog_bar=True)
         return loss
 
     def test_step(self, batch, batch_idx):
-        pass
+        # Here we just reuse the validation_step for testing
+        return self.validation_step(batch, batch_idx)
 
     def configure_optimizers(self):
         return torch.optim.Adam(
