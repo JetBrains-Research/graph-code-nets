@@ -3,9 +3,9 @@ from running.wraped_model import VarMisuseLayer
 import yaml
 from data_processing import vocabulary, graph_data_loader
 
-data_path = "../data"
-config_path = "../config.yml"
-vocabulary_path = "../vocab.txt"
+data_path = "/home/timav/jb/graph-code-nets/data"
+config_path = "/home/timav/jb/graph-code-nets/config.yml"
+vocabulary_path = "/home/timav/jb/graph-code-nets/vocab.txt"
 
 config = yaml.safe_load(open(config_path))
 vocab = vocabulary.Vocabulary(vocab_path=vocabulary_path)
