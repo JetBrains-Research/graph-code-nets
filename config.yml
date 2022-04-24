@@ -1,7 +1,7 @@
 model:
   configuration: "rnn"
   base:
-    hidden_dim: 512
+    hidden_dim: 128
     dropout_rate: 0.1
     num_edge_types: 24
   rnn:
@@ -18,9 +18,9 @@ model:
     attention_dim: 512
     num_heads: 8
 data:
-  max_batch_size: 12500
+  max_batch_size: 1250
   max_buffer_size: 50  # In terms of no. of (maximum efficiency) batches.
-  max_sequence_length: 512
+  max_sequence_length: 256
   valid_interval: 250000
   max_valid_samples: 25000
   max_token_length: 10  # In terms of (BPE) sub-tokens.

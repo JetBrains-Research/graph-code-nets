@@ -26,13 +26,13 @@ class GraphDataModule(pl.LightningDataModule):
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="train",
+                mode="train_small",
             )
             self._val = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev",
+                mode="dev_small",
             )
 
         if stage == "test" or stage is None:
@@ -45,17 +45,17 @@ class GraphDataModule(pl.LightningDataModule):
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
-            self._train, batch_size=16, collate_fn=self._collate_fn, num_workers=16
+            self._train, batch_size=2, collate_fn=self._collate_fn, num_workers=8
         )
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
-            self._val, batch_size=16, collate_fn=self._collate_fn, num_workers=16
+            self._val, batch_size=2, collate_fn=self._collate_fn, num_workers=8
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
-            self._test, batch_size=16, collate_fn=self._collate_fn, num_workers=16
+            self._test, batch_size=2, collate_fn=self._collate_fn, num_workers=8
         )
 
     def _collate_fn(self, batch):
