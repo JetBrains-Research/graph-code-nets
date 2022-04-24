@@ -1,4 +1,6 @@
 import numpy as np
+from torchmetrics import Accuracy
+
 import running.util as util
 import torch
 import torch.nn.functional as F
@@ -16,6 +18,7 @@ class VarMisuseLayer(pl.LightningModule):
         self.model_config = model_config
         self.training_config = training_config
         self.vocab_dim = vocab_dim
+        self.accuracy = Accuracy()
 
         self.embedding = torch.normal(
             mean=0,
@@ -71,7 +74,12 @@ class VarMisuseLayer(pl.LightningModule):
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
         loss = sum(ls)
-        self.log("val_loss", loss, prog_bar=True)
+        self.log("loc_loss", ls[0], prog_bar=True)
+        self.log("target_loss", ls[1], prog_bar=True)
+        self.log("val_no_bug_pred_acc", acs[0], prog_bar=True)
+        self.log("val_bug_loc_acc", acs[1], prog_bar=True)
+        self.log("val_target_loc_acc", acs[2], prog_bar=True)
+        self.log("val_joint_acc", acs[3], prog_bar=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -106,6 +114,9 @@ class VarMisuseLayer(pl.LightningModule):
         no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
             1e-9 + torch.sum(1 - is_buggy)
         )
+        # I added this because in case torch.sum(1 - is_buggy) == 0 was calculated wrong
+        if torch.sum(1 - is_buggy) == 0:
+            no_bug_pred_acc = 1
         bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))
         pointer_logits = predictions[:, 1]
 

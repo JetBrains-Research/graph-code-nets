@@ -16,6 +16,7 @@ data.setup("fit")
 model = VarMisuseLayer(config["model"], config["training"], vocab.vocab_dim)
 
 trainer = pl.Trainer(accelerator="gpu", devices=1, max_epochs=2, val_check_interval=0.2)
+trainer.validate(verbose=False)
 trainer.fit(
     model=model,
     train_dataloaders=data.train_dataloader(),
