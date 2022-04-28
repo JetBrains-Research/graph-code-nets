@@ -3,12 +3,18 @@ from models.wraped_model import VarMisuseLayer
 import yaml
 from data_processing import vocabulary, graph_data_loader
 from pytorch_lightning.loggers import WandbLogger
+import argparse
 
-data_path = "/home/timav/jb/graph-code-nets/data"
-config_path = "/home/timav/jb/graph-code-nets/config.yml"
-vocabulary_path = "/home/timav/jb/graph-code-nets/vocab.txt"
+ap = argparse.ArgumentParser()
+ap.add_argument("config_path")
+args = ap.parse_args()
 
+config_path = args.config_path
 config = yaml.safe_load(open(config_path))
+data_path = config["paths"]["data"]
+vocabulary_path = config["paths"]["vocab"]
+
+
 vocab = vocabulary.Vocabulary(vocab_path=vocabulary_path)
 data = graph_data_loader.GraphDataModule(data_path, vocab, config)
 data.prepare_data()
@@ -23,5 +29,3 @@ trainer.fit(
     train_dataloaders=data.train_dataloader(),
     val_dataloaders=data.val_dataloader(),
 )
-# trainer.validate(model=model, dataloaders=data.val_dataloader())
-# trainer.test(model=model, dataloaders=data.test_dataloader())

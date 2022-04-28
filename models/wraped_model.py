@@ -15,42 +15,43 @@ from models.util import (
 class VarMisuseLayer(pl.LightningModule):
     def __init__(self, model_config: dict, training_config: dict, vocab_dim: int):
         super().__init__()
-        self.model_config = model_config
-        self.training_config = training_config
-        self.vocab_dim = vocab_dim
-        self.accuracy = Accuracy()
+        self._model_config = model_config
+        self._training_config = training_config
+        self._vocab_dim = vocab_dim
+        self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self._accuracy = Accuracy()
 
-        self.embedding = torch.normal(
+        self._embedding = torch.normal(
             mean=0,
-            std=self.model_config["base"]["hidden_dim"] ** -0.5,
-            size=[self.vocab_dim, self.model_config["base"]["hidden_dim"]],
-        ).cuda()
-        self.pos_enc = util.positional_encoding(
-            self.model_config["base"]["hidden_dim"], 5000
+            std=self._model_config["base"]["hidden_dim"] ** -0.5,
+            size=[self._vocab_dim, self._model_config["base"]["hidden_dim"]],
+        ).to(self._device)
+        self._pos_enc = util.positional_encoding(
+            self._model_config["base"]["hidden_dim"], 5000
         )
 
-        base_config = self.model_config["base"]
-        inner_model = self.model_config["configuration"]
-        self.prediction = two_pointer_fcn.TwoPointerFCN(base_config)
+        base_config = self._model_config["base"]
+        inner_model = self._model_config["configuration"]
+        self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
         if inner_model == "rnn":
-            self.model = encoder_gru.EncoderGRU(
-                util.join_dicts(base_config, self.model_config["rnn"]),
+            self._model = encoder_gru.EncoderGRU(
+                util.join_dicts(base_config, self._model_config["rnn"]),
             )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
     def forward(self, tokens: torch.tensor, token_mask: torch.tensor, edges: torch.tensor) -> torch.tensor:
         original_shape = list(
-            np.append(np.array(tokens.shape), self.model_config["base"]["hidden_dim"])
+            np.append(np.array(tokens.shape), self._model_config["base"]["hidden_dim"])
         )
-        flat_tokens = tokens.type(torch.LongTensor).flatten().cuda()
-        subtoken_embeddings = torch.index_select(self.embedding, 0, flat_tokens)
+        flat_tokens = tokens.type(torch.LongTensor).flatten().to(self._device)
+        subtoken_embeddings = torch.index_select(self._embedding, 0, flat_tokens)
         subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
-        subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1).cuda()
+        subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1).to(self._device)
         states = torch.mean(subtoken_embeddings, 2)
         # have to understand why the following line is needed
         # states += self.pos_enc[:states.shape[1]]
-        predictions = torch.transpose(self.prediction(self.model(states)[0]), 1, 2)
+        predictions = torch.transpose(self._prediction(self._model(states)[0]), 1, 2)
         return predictions
 
     def training_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
@@ -65,6 +66,13 @@ class VarMisuseLayer(pl.LightningModule):
         return loss
 
     def validation_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
+        return self._shared_eval_step(batch, batch_idx, "val")
+
+    def test_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
+        # Here we just reuse the validation_step for testing
+        return self._shared_eval_step(batch, batch_idx, "test")
+
+    def _shared_eval_step(self, batch: torch.tensor, batch_idx: int, step: str) -> torch.float32:
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
@@ -72,21 +80,17 @@ class VarMisuseLayer(pl.LightningModule):
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
         loss = sum(ls)
-        self.log("loc_loss", ls[0], prog_bar=True)
-        self.log("target_loss", ls[1], prog_bar=True)
-        self.log("val_no_bug_pred_acc", acs[0], prog_bar=True)
-        self.log("val_bug_loc_acc", acs[1], prog_bar=True)
-        self.log("val_target_loc_acc", acs[2], prog_bar=True)
-        self.log("val_joint_acc", acs[3], prog_bar=True)
+        self.log(step + "_loc_loss", ls[0], prog_bar=True)
+        self.log(step + "_target_loss", ls[1], prog_bar=True)
+        self.log(step + "_no_bug_pred_acc", acs[0], prog_bar=True)
+        self.log(step + "_bug_loc_acc", acs[1], prog_bar=True)
+        self.log(step + "_target_loc_acc", acs[2], prog_bar=True)
+        self.log(step + "_joint_acc", acs[3], prog_bar=True)
         return loss
-
-    def test_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
-        # Here we just reuse the validation_step for testing
-        return self.validation_step(batch, batch_idx)
 
     def configure_optimizers(self) -> torch.optim:
         return torch.optim.Adam(
-            self.parameters(), lr=self.training_config["learning_rate"]
+            self.parameters(), lr=self._training_config["learning_rate"]
         )
 
     # probably there are lots of bugs here right now...
@@ -122,20 +126,20 @@ class VarMisuseLayer(pl.LightningModule):
         candidate_mask = np.zeros(pointer_logits.size())
         for e in repair_candidates:
             candidate_mask[e[0]][e[1]] = 1
-        candidate_mask = torch.tensor(candidate_mask).cuda()
+        candidate_mask = torch.tensor(candidate_mask).to(self._device)
 
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits, dim=-1)
         target_mask = np.zeros(pointer_probs.size())
         for e in repair_targets:
             target_mask[e[0]][e[1]] = 1
-        target_mask = torch.tensor(target_mask).cuda()
+        target_mask = torch.tensor(target_mask).to(self._device)
 
         target_probs = torch.sum(target_mask * pointer_probs, -1)
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
                 1e-9 + torch.sum(is_buggy)
         )
-        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).cuda()
+        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).to(self._device)
         target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
 
         joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (

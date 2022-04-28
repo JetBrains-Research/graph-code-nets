@@ -1,3 +1,6 @@
+paths:
+  data: "/home/timav/jb/graph-code-nets/data"
+  vocab: "/home/timav/jb/graph-code-nets/vocab.txt"
 model:
   configuration: "rnn"
   base:
