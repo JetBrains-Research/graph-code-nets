@@ -1,19 +1,19 @@
 import numpy as np
 from torchmetrics import Accuracy
 
-import running.util as util
+import models.util as util
 import torch
 import torch.nn.functional as F
 from models import two_pointer_fcn, encoder_gru
 import pytorch_lightning as pl
-from running.util import (
+from models.util import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
 )
 
 
 class VarMisuseLayer(pl.LightningModule):
-    def __init__(self, model_config, training_config, vocab_dim):
+    def __init__(self, model_config: dict, training_config: dict, vocab_dim: int):
         super().__init__()
         self.model_config = model_config
         self.training_config = training_config
@@ -29,19 +29,17 @@ class VarMisuseLayer(pl.LightningModule):
             self.model_config["base"]["hidden_dim"], 5000
         )
 
-        join_dicts = lambda d1, d2: {**d1, **d2}
         base_config = self.model_config["base"]
         inner_model = self.model_config["configuration"]
-        self.prediction = linear.TwoPointerFCN(base_config)
+        self.prediction = two_pointer_fcn.TwoPointerFCN(base_config)
         if inner_model == "rnn":
-            self.model = rnn.EncoderGRU(
-                join_dicts(base_config, self.model_config["rnn"]),
-                shared_embedding=self.embedding,
+            self.model = encoder_gru.EncoderGRU(
+                util.join_dicts(base_config, self.model_config["rnn"]),
             )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
-    def forward(self, tokens, token_mask, edges):
+    def forward(self, tokens: torch.tensor, token_mask: torch.tensor, edges: torch.tensor) -> torch.tensor:
         original_shape = list(
             np.append(np.array(tokens.shape), self.model_config["base"]["hidden_dim"])
         )
@@ -55,7 +53,7 @@ class VarMisuseLayer(pl.LightningModule):
         predictions = torch.transpose(self.prediction(self.model(states)[0]), 1, 2)
         return predictions
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
         torch.cuda.empty_cache()
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
@@ -66,7 +64,7 @@ class VarMisuseLayer(pl.LightningModule):
         loss = sum(ls)
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
@@ -82,24 +80,24 @@ class VarMisuseLayer(pl.LightningModule):
         self.log("val_joint_acc", acs[3], prog_bar=True)
         return loss
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
         # Here we just reuse the validation_step for testing
         return self.validation_step(batch, batch_idx)
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> torch.optim:
         return torch.optim.Adam(
             self.parameters(), lr=self.training_config["learning_rate"]
         )
 
     # probably there are lots of bugs here right now...
     def get_loss(
-        self,
-        predictions,
-        token_mask,
-        error_locations,
-        repair_targets,
-        repair_candidates,
-    ):
+            self,
+            predictions: torch.tensor,
+            token_mask: torch.tensor,
+            error_locations: torch.tensor,
+            repair_targets: torch.tensor,
+            repair_candidates: torch.tensor,
+    ) -> tuple[tuple, tuple]:
         seq_mask = token_mask.float()
         predictions += (1.0 - torch.unsqueeze(seq_mask, 1)) * torch.finfo(
             torch.float32
@@ -112,7 +110,7 @@ class VarMisuseLayer(pl.LightningModule):
         loc_loss = torch.mean(loc_loss)
         loc_accs = sparse_categorical_accuracy(error_locations, loc_predictions)
         no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
-            1e-9 + torch.sum(1 - is_buggy)
+                1e-9 + torch.sum(1 - is_buggy)
         )
         # I added this because in case torch.sum(1 - is_buggy) == 0 was calculated wrong
         if torch.sum(1 - is_buggy) == 0:
@@ -135,13 +133,13 @@ class VarMisuseLayer(pl.LightningModule):
 
         target_probs = torch.sum(target_mask * pointer_probs, -1)
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
-            1e-9 + torch.sum(is_buggy)
+                1e-9 + torch.sum(is_buggy)
         )
         rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).cuda()
         target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
 
         joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (
-            1e-9 + torch.sum(is_buggy)
+                1e-9 + torch.sum(is_buggy)
         )
         return (loc_loss, target_loss), (
             no_bug_pred_acc,

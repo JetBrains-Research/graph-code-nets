@@ -3,7 +3,7 @@ import torch
 
 
 class EncoderGRU(pl.LightningModule):
-    def __init__(self, model_config, shared_embedding=None, vocab_dim=None):
+    def __init__(self, model_config: dict):
         super().__init__()
         self.hidden_dim = model_config["hidden_dim"]
         self.num_layers = model_config["num_layers"]
@@ -17,5 +17,5 @@ class EncoderGRU(pl.LightningModule):
             bidirectional=True,
         )
 
-    def forward(self, states):
+    def forward(self, states: torch.tensor) -> torch.tensor:
         return self.rnn(states)

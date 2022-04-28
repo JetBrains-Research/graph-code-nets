@@ -20,7 +20,7 @@ class GraphDataModule(pl.LightningDataModule):
     def prepare_data(self):
         pass
 
-    def setup(self, stage: str = None):
+    def setup(self, stage: str = None) -> None:
         if stage == "fit" or stage is None:
             self._train = GraphDataset(
                 data_path=self._data_path,
@@ -58,7 +58,7 @@ class GraphDataModule(pl.LightningDataModule):
             self._test, batch_size=4, collate_fn=self._collate_fn, num_workers=8
         )
 
-    def _collate_fn(self, batch):
+    def _collate_fn(self, batch) -> tuple:
         batch = [
             (
                 e["tokens"],

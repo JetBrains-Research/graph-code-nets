@@ -44,10 +44,10 @@ class GraphDataset(Dataset):
         self._pref_sum_lines = get_files_count_lines(self._data_path)
         self._length = self._pref_sum_lines[-1]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._length
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> dict[str, Any]:
         file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
         return self.process_line(

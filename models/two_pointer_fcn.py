@@ -3,10 +3,10 @@ import torch
 
 
 class TwoPointerFCN(pl.LightningModule):
-    def __init__(self, model_config):
+    def __init__(self, model_config: dict):
         super().__init__()
         self.hidden_dim = model_config["hidden_dim"]
         self.layer = torch.nn.Linear(self.hidden_dim, 2)
 
-    def forward(self, states):
+    def forward(self, states: torch.tensor) -> torch.tensor:
         return self.layer(states)
