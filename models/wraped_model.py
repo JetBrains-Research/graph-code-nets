@@ -4,7 +4,7 @@ from torchmetrics import Accuracy
 import running.util as util
 import torch
 import torch.nn.functional as F
-from models import linear, rnn
+from models import two_pointer_fcn, encoder_gru
 import pytorch_lightning as pl
 from running.util import (
     sparse_categorical_accuracy,
@@ -32,9 +32,9 @@ class VarMisuseLayer(pl.LightningModule):
         join_dicts = lambda d1, d2: {**d1, **d2}
         base_config = self.model_config["base"]
         inner_model = self.model_config["configuration"]
-        self.prediction = linear.Linear(base_config)
+        self.prediction = linear.TwoPointerFCN(base_config)
         if inner_model == "rnn":
-            self.model = rnn.RNN(
+            self.model = rnn.EncoderGRU(
                 join_dicts(base_config, self.model_config["rnn"]),
                 shared_embedding=self.embedding,
             )

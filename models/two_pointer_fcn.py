@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import torch
 
 
-class Linear(pl.LightningModule):
+class TwoPointerFCN(pl.LightningModule):
     def __init__(self, model_config):
         super().__init__()
         self.hidden_dim = model_config["hidden_dim"]

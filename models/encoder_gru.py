@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import torch
 
 
-class RNN(pl.LightningModule):
+class EncoderGRU(pl.LightningModule):
     def __init__(self, model_config, shared_embedding=None, vocab_dim=None):
         super().__init__()
         self.hidden_dim = model_config["hidden_dim"]
