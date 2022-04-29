@@ -1,9 +1,8 @@
 import gzip
-import gzip
 import math
 import pathlib
 from itertools import chain
-from typing import Iterator
+from typing import Iterator, Optional
 
 import ijson
 import numpy as np
@@ -59,6 +58,8 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         ]
         self._debug = debug
 
+        self.__data_sample: Optional[Data] = None
+
         super().__init__(root, transform, pre_transform, pre_filter)
 
     def _item_from_dict(self, dct) -> Data:
@@ -96,9 +97,39 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         )
         return torch.Tensor(tokens)
 
+    def _data_sample(self):
+        if self.__data_sample is None:
+            f = gzip.open(str(self._data_files[0]), "rb")
+            items = ijson.items(f, "item")
+            self.__data_sample = self._item_from_dict(next(items))
+            f.close()
+
+        return self.__data_sample
+
+    @property
+    def num_node_features(self) -> int:
+        data = self._data_sample()
+        if hasattr(data, "num_node_features"):
+            return data.num_node_features
+        raise AttributeError(
+            f"'{data.__class__.__name__}' object has no "
+            f"attribute 'num_node_features'"
+        )
+
+    @property
+    def num_edge_features(self) -> int:
+        data = self._data_sample()
+        if hasattr(data, "num_edge_features"):
+            return data.num_edge_features
+        raise AttributeError(
+            f"'{data.__class__.__name__}' object has no "
+            f"attribute 'num_edge_features'"
+        )
+
     def _items_from_file(self, filename):
         f = gzip.open(str(filename), "rb")
-        return map(self._item_from_dict, ijson.items(f, "item"))
+        items = ijson.items(f, "item")
+        return map(self._item_from_dict, items)
 
     def len(self) -> int:
         raise NotImplementedError
@@ -117,3 +148,6 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             files_end = min(len(self._data_files), files_start + per_worker)
             files_slice = self._data_files[files_start:files_end]
         return chain.from_iterable(map(self._items_from_file, files_slice))
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}()"
