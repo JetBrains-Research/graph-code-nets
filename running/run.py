@@ -14,7 +14,6 @@ config = yaml.safe_load(open(config_path))
 data_path = config["paths"]["data"]
 vocabulary_path = config["paths"]["vocab"]
 
-
 vocab = vocabulary.Vocabulary(vocab_path=vocabulary_path)
 data = graph_data_loader.GraphDataModule(data_path, vocab, config)
 data.prepare_data()
@@ -23,7 +22,13 @@ data.setup("fit")
 model = VarMisuseLayer(config["model"], config["training"], vocab.vocab_dim)
 
 wandb_logger = WandbLogger(project="graph-nets-test")
-trainer = pl.Trainer(accelerator="gpu", devices=1, max_epochs=2, val_check_interval=0.2, logger=wandb_logger)
+trainer = pl.Trainer(
+    accelerator="gpu",
+    devices=1,
+    max_epochs=2,
+    val_check_interval=0.2,
+    logger=wandb_logger,
+)
 trainer.fit(
     model=model,
     train_dataloaders=data.train_dataloader(),

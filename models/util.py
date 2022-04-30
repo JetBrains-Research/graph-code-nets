@@ -3,7 +3,9 @@ import torch
 
 
 # Based on https://github.com/DongjunLee/transformer-tensorflow/blob/master/transformer/attention.py
-def positional_encoding(dim: int, sentence_length: int, dtype=torch.float32) -> torch.tensor:
+def positional_encoding(
+    dim: int, sentence_length: int, dtype=torch.float32
+) -> torch.tensor:
     encoded_vec = np.array(
         [
             pos / np.power(10000, 2 * i / dim)
@@ -31,7 +33,9 @@ def sparse_categorical_accuracy(y_true, y_pred) -> torch.tensor:
     return torch.eq(y_true, torch.argmax(y_pred, -1)).long()
 
 
-def sparse_softmax_cross_entropy_with_logits(error_locations, loc_predictions) -> torch.float32:
+def sparse_softmax_cross_entropy_with_logits(
+    error_locations, loc_predictions
+) -> torch.float32:
     loss_input = torch.log_softmax(loc_predictions, 1)
     loss_input = loss_input.type(torch.FloatTensor)
     labels = error_locations.type(torch.LongTensor)
