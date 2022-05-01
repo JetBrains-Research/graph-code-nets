@@ -20,11 +20,9 @@ class VarMisuseLayer(pl.LightningModule):
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._accuracy = Accuracy()
 
-        self._embedding = torch.normal(
-            mean=0,
-            std=self._model_config["base"]["hidden_dim"] ** -0.5,
-            size=[self._vocab_dim, self._model_config["base"]["hidden_dim"]],
-        ).to(self._device)
+        self._embedding = torch.nn.Embedding(
+            self._vocab_dim, self._model_config["base"]["hidden_dim"]
+        )
 
         base_config = self._model_config["base"]
         inner_model = self._model_config["configuration"]
@@ -37,13 +35,13 @@ class VarMisuseLayer(pl.LightningModule):
             raise ValueError("Unknown model component provided:", inner_model)
 
     def forward(
-        self, tokens: torch.tensor, token_mask: torch.tensor, edges: torch.tensor
+            self, tokens: torch.tensor, token_mask: torch.tensor, edges: torch.tensor
     ) -> torch.tensor:
         original_shape = list(
             np.append(np.array(tokens.shape), self._model_config["base"]["hidden_dim"])
         )
         flat_tokens = tokens.type(torch.LongTensor).flatten().to(self._device)
-        subtoken_embeddings = torch.index_select(self._embedding, 0, flat_tokens)
+        subtoken_embeddings = self._embedding(flat_tokens)
         subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
         subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1).to(
             self._device
@@ -71,7 +69,7 @@ class VarMisuseLayer(pl.LightningModule):
         return self._shared_eval_step(batch, batch_idx, "test")
 
     def _shared_eval_step(
-        self, batch: torch.tensor, batch_idx: int, step: str
+            self, batch: torch.tensor, batch_idx: int, step: str
     ) -> torch.float32:
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
@@ -95,12 +93,12 @@ class VarMisuseLayer(pl.LightningModule):
 
     # probably there are lots of bugs here right now...
     def get_loss(
-        self,
-        predictions: torch.tensor,
-        token_mask: torch.tensor,
-        error_locations: torch.tensor,
-        repair_targets: torch.tensor,
-        repair_candidates: torch.tensor,
+            self,
+            predictions: torch.tensor,
+            token_mask: torch.tensor,
+            error_locations: torch.tensor,
+            repair_targets: torch.tensor,
+            repair_candidates: torch.tensor,
     ) -> tuple[tuple, tuple]:
         seq_mask = token_mask.float()
         predictions += (1.0 - torch.unsqueeze(seq_mask, 1)) * torch.finfo(
@@ -114,7 +112,7 @@ class VarMisuseLayer(pl.LightningModule):
         loc_loss = torch.mean(loc_loss)
         loc_accs = sparse_categorical_accuracy(error_locations, loc_predictions)
         no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
-            1e-9 + torch.sum(1 - is_buggy)
+                1e-9 + torch.sum(1 - is_buggy)
         )
         # I added this because in case torch.sum(1 - is_buggy) == 0 was calculated wrong
         if torch.sum(1 - is_buggy) == 0:
@@ -137,13 +135,13 @@ class VarMisuseLayer(pl.LightningModule):
 
         target_probs = torch.sum(target_mask * pointer_probs, -1)
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
-            1e-9 + torch.sum(is_buggy)
+                1e-9 + torch.sum(is_buggy)
         )
         rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).to(self._device)
         target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
 
         joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (
-            1e-9 + torch.sum(is_buggy)
+                1e-9 + torch.sum(is_buggy)
         )
         return (
             (loc_loss, target_loss),

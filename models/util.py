@@ -1,21 +1,4 @@
-import numpy as np
 import torch
-
-
-# Based on https://github.com/DongjunLee/transformer-tensorflow/blob/master/transformer/attention.py
-def positional_encoding(
-    dim: int, sentence_length: int, dtype=torch.float32
-) -> torch.tensor:
-    encoded_vec = np.array(
-        [
-            pos / np.power(10000, 2 * i / dim)
-            for pos in range(sentence_length)
-            for i in range(dim)
-        ]
-    )
-    encoded_vec[::2] = np.sin(encoded_vec[::2])
-    encoded_vec[1::2] = np.cos(encoded_vec[1::2])
-    return torch.tensor(encoded_vec.reshape([sentence_length, dim]), dtype=dtype)
 
 
 def join_dicts(d1, d2) -> dict:
