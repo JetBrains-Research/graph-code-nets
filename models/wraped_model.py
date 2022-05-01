@@ -12,10 +12,11 @@ from models.util import (
 
 
 class VarMisuseLayer(pl.LightningModule):
-    def __init__(self, model_config: dict, training_config: dict, vocab_dim: int):
+    def __init__(self, config: dict, vocab_dim: int):
         super().__init__()
-        self._model_config = model_config
-        self._training_config = training_config
+        self._model_config = config["model"]
+        self._data_config = config["data"]
+        self._training_config = config["training"]
         self._vocab_dim = vocab_dim
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._accuracy = Accuracy()
@@ -54,7 +55,7 @@ class VarMisuseLayer(pl.LightningModule):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
-        is_buggy, loc_predictions, target_probs = self.shared_loss_acs_calc(
+        is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
@@ -74,18 +75,48 @@ class VarMisuseLayer(pl.LightningModule):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
-        is_buggy, loc_predictions, target_probs = self.shared_loss_acs_calc(
+        is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
         acs = self.test_get_acs(is_buggy, loc_predictions, target_probs, error_loc)
         loss = sum(ls)
-        self.log(step + "_loc_loss", ls[0], prog_bar=True)
-        self.log(step + "_target_loss", ls[1], prog_bar=True)
-        self.log(step + "_no_bug_pred_acc", acs[0], prog_bar=True)
-        self.log(step + "_bug_loc_acc", acs[1], prog_bar=True)
-        self.log(step + "_target_loc_acc", acs[2], prog_bar=True)
-        self.log(step + "_joint_acc", acs[3], prog_bar=True)
+        self.log(
+            step + "_loc_loss",
+            ls[0],
+            prog_bar=True,
+            batch_size=self._data_config["batch_size"],
+        )
+        self.log(
+            step + "_target_loss",
+            ls[1],
+            prog_bar=True,
+            batch_size=self._data_config["batch_size"],
+        )
+        self.log(
+            step + "_no_bug_pred_acc",
+            acs[0],
+            prog_bar=True,
+            batch_size=self._data_config["batch_size"],
+        )
+        self.log(
+            step + "_bug_loc_acc",
+            acs[1],
+            prog_bar=True,
+            batch_size=self._data_config["batch_size"],
+        )
+        self.log(
+            step + "_target_loc_acc",
+            acs[2],
+            prog_bar=True,
+            batch_size=self._data_config["batch_size"],
+        )
+        self.log(
+            step + "_joint_acc",
+            acs[3],
+            prog_bar=True,
+            batch_size=self._data_config["batch_size"],
+        )
         return loss
 
     def configure_optimizers(self) -> torch.optim:
@@ -93,7 +124,7 @@ class VarMisuseLayer(pl.LightningModule):
             self.parameters(), lr=self._training_config["learning_rate"]
         )
 
-    def shared_loss_acs_calc(
+    def _shared_loss_acs_calc(
         self,
         predictions: torch.tensor,
         token_mask: torch.tensor,
@@ -160,7 +191,6 @@ class VarMisuseLayer(pl.LightningModule):
         joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (
             1e-9 + torch.sum(is_buggy)
         )
-
         return (
             no_bug_pred_acc,
             bug_loc_acc,

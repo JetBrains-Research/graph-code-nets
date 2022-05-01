@@ -19,7 +19,7 @@ data = graph_data_loader.GraphDataModule(data_path, vocab, config)
 data.prepare_data()
 data.setup("fit")
 # data.setup("test")
-model = VarMisuseLayer(config["model"], config["training"], vocab.vocab_dim)
+model = VarMisuseLayer(config, vocab.vocab_dim)
 
 wandb_logger = WandbLogger(project="graph-nets-test")
 trainer = pl.Trainer(

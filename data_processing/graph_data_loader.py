@@ -45,17 +45,26 @@ class GraphDataModule(pl.LightningDataModule):
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
-            self._train, batch_size=2, collate_fn=self._collate_fn, num_workers=8
+            self._train,
+            batch_size=self._config["data"]["batch_size"],
+            collate_fn=self._collate_fn,
+            num_workers=8,
         )
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
-            self._val, batch_size=2, collate_fn=self._collate_fn, num_workers=8
+            self._val,
+            batch_size=self._config["data"]["batch_size"],
+            collate_fn=self._collate_fn,
+            num_workers=8,
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
-            self._test, batch_size=2, collate_fn=self._collate_fn, num_workers=8
+            self._test,
+            batch_size=self._config["data"]["batch_size"],
+            collate_fn=self._collate_fn,
+            num_workers=8,
         )
 
     def _collate_fn(self, batch) -> tuple:
