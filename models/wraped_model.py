@@ -51,13 +51,13 @@ class VarMisuseLayer(pl.LightningModule):
         return predictions
 
     def training_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
-        torch.cuda.empty_cache()
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
-        ls, acs = self.get_loss(
+        is_buggy, loc_predictions, target_probs = self.shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
+        ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
         loss = sum(ls)
         return loss
 
@@ -74,9 +74,11 @@ class VarMisuseLayer(pl.LightningModule):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
-        ls, acs = self.get_loss(
+        is_buggy, loc_predictions, target_probs = self.shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
+        ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
+        acs = self.test_get_acs(is_buggy, loc_predictions, target_probs, error_loc)
         loss = sum(ls)
         self.log(step + "_loc_loss", ls[0], prog_bar=True)
         self.log(step + "_target_loss", ls[1], prog_bar=True)
@@ -91,36 +93,22 @@ class VarMisuseLayer(pl.LightningModule):
             self.parameters(), lr=self._training_config["learning_rate"]
         )
 
-    # probably there are lots of bugs here right now...
-    def get_loss(
+    def shared_loss_acs_calc(
         self,
         predictions: torch.tensor,
         token_mask: torch.tensor,
         error_locations: torch.tensor,
         repair_targets: torch.tensor,
         repair_candidates: torch.tensor,
-    ) -> tuple[tuple, tuple]:
+    ):
         seq_mask = token_mask.float()
         predictions += (1.0 - torch.unsqueeze(seq_mask, 1)) * torch.finfo(
             torch.float32
         ).min
         is_buggy = torch.clamp(error_locations, 0, 1).float()
         loc_predictions = predictions[:, 0]
-        loc_loss = sparse_softmax_cross_entropy_with_logits(
-            error_locations, loc_predictions
-        )
-        loc_loss = torch.mean(loc_loss)
-        loc_accs = sparse_categorical_accuracy(error_locations, loc_predictions)
-        no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
-            1e-9 + torch.sum(1 - is_buggy)
-        )
-        # I added this because in case torch.sum(1 - is_buggy) == 0 was calculated wrong
-        if torch.sum(1 - is_buggy) == 0:
-            no_bug_pred_acc = 1
-        bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))
         pointer_logits = predictions[:, 1]
 
-        # maybe there is an appropriate function in pytorch for that
         candidate_mask = np.zeros(pointer_logits.size())
         for e in repair_candidates:
             candidate_mask[e[0]][e[1]] = 1
@@ -128,27 +116,54 @@ class VarMisuseLayer(pl.LightningModule):
 
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits, dim=-1)
+
         target_mask = np.zeros(pointer_probs.size())
         for e in repair_targets:
             target_mask[e[0]][e[1]] = 1
         target_mask = torch.tensor(target_mask).to(self._device)
-
         target_probs = torch.sum(target_mask * pointer_probs, -1)
+
+        return is_buggy, loc_predictions, target_probs
+
+    def test_get_loss(
+        self,
+        is_buggy: torch.tensor,
+        loc_predictions: torch.tensor,
+        target_probs: torch.tensor,
+        error_locations: torch.tensor,
+    ) -> tuple:
+        loc_loss = sparse_softmax_cross_entropy_with_logits(
+            error_locations, loc_predictions
+        )
+        loc_loss = torch.mean(loc_loss)
         target_loss = torch.sum(is_buggy * -torch.log(target_probs + 1e-9)) / (
             1e-9 + torch.sum(is_buggy)
         )
-        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).to(self._device)
-        target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
+        return loc_loss, target_loss
 
+    def test_get_acs(
+        self,
+        is_buggy: torch.tensor,
+        loc_predictions: torch.tensor,
+        target_probs: torch.tensor,
+        error_locations: torch.tensor,
+    ) -> tuple:
+        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).to(self._device)
+        loc_accs = sparse_categorical_accuracy(error_locations, loc_predictions)
+        no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
+            1e-9 + torch.sum(1 - is_buggy)
+        )
+        if torch.sum(1 - is_buggy) == 0:
+            no_bug_pred_acc = 1
+        bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))
+        target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
         joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (
             1e-9 + torch.sum(is_buggy)
         )
+
         return (
-            (loc_loss, target_loss),
-            (
-                no_bug_pred_acc,
-                bug_loc_acc,
-                target_loc_acc,
-                joint_acc,
-            ),
+            no_bug_pred_acc,
+            bug_loc_acc,
+            target_loc_acc,
+            joint_acc,
         )
