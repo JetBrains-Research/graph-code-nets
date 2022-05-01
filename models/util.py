@@ -1,7 +1,7 @@
 import torch
 
 
-def join_dicts(d1, d2) -> dict:
+def join_dicts(d1: dict, d2: dict) -> dict:
     return {**d1, **d2}
 
 
@@ -12,12 +12,14 @@ def prefix_sum(arr) -> list:
     return res
 
 
-def sparse_categorical_accuracy(y_true, y_pred) -> torch.tensor:
+def sparse_categorical_accuracy(
+    y_true: torch.tensor, y_pred: torch.tensor
+) -> torch.tensor:
     return torch.eq(y_true, torch.argmax(y_pred, -1)).long()
 
 
 def sparse_softmax_cross_entropy_with_logits(
-    error_locations, loc_predictions
+    error_locations: torch.tensor, loc_predictions: torch.tensor
 ) -> torch.float32:
     loss_input = torch.log_softmax(loc_predictions, 1)
     loss_input = loss_input.type(torch.FloatTensor)
