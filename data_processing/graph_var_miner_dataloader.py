@@ -7,16 +7,11 @@ from torch_geometric.loader import DataLoader
 
 from data_processing.graph_var_miner_dataset import GraphVarMinerDataset
 
-
 # DataLoader expects output to be tensor, but yet they are GraphDatasetItemBase, so we need collate_fn
 from data_processing.graph_var_miner_dataset_iterable import (
     GraphVarMinerDatasetIterable,
 )
 from data_processing.vocabulary import Vocabulary
-
-
-def identity(x):
-    return x
 
 
 class GraphVarMinerModule(pl.LightningDataModule):
@@ -51,12 +46,10 @@ class GraphVarMinerModule(pl.LightningDataModule):
 
     # shuffle is not supported due to IterableDataset
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self._train, batch_size=64, collate_fn=identity, num_workers=2
-        )
+        return DataLoader(self._train, batch_size=64, num_workers=2)
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self._val, batch_size=64, collate_fn=identity, num_workers=2)
+        return DataLoader(self._val, batch_size=64, num_workers=2)
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self._test, batch_size=64, collate_fn=identity, num_workers=2)
+        return DataLoader(self._test, batch_size=64, num_workers=2)

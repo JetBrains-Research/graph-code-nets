@@ -63,7 +63,10 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         super().__init__(root, transform, pre_transform, pre_filter)
 
     def _item_from_dict(self, dct) -> Data:
-        tokens = self._process_tokens(dct["ContextGraph"]["NodeLabels"].values())
+        nodes = list(dct["ContextGraph"]["NodeLabels"].values())
+        tokens = self._process_tokens(nodes)
+        marked_tokens = torch.tensor(np.array(nodes) == "<var>", dtype=torch.float)
+
         edge_index = []
         edge_attr = []
         for edges_typed_group in dct["ContextGraph"]["Edges"].items():
@@ -71,18 +74,19 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             edge_index.extend(edges_typed_group[1])
             edge_attr.extend([edges_type] * len(edges_typed_group[1]))
         edge_index_t = torch.tensor(edge_index).t().contiguous()
-        edge_attr_t = torch.tensor(edge_attr)
+        edge_weight_t = torch.tensor(edge_attr, dtype=torch.float)
 
         filename = dct["filename"]
-        name = dct["filename"]
+        name = self._process_tokens([dct["name"]])
         types = self._process_tokens(dct["types"])
         return Data(
             x=tokens,
             edge_index=edge_index_t,
-            edge_attr=edge_attr_t,
+            edge_weight=edge_weight_t,
             filename=filename,
             name=name,
             types=types,
+            marked_tokens=marked_tokens,
         )
 
     def _process_tokens(self, tokens: list) -> torch.Tensor:
