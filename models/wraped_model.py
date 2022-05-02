@@ -51,12 +51,9 @@ class VarMisuseLayer(pl.LightningModule):
         return predictions
 
     def training_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
-        tokens, edges, error_loc, repair_targets, repair_candidates = batch
-        token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
-        pointer_preds = self(tokens, token_mask, edges)
-        is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
-            pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
-        )
+        is_buggy, loc_predictions, target_probs = self._shared_train_eval_step(batch, batch_idx)
+        error_loc = batch[2]
+
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
         loss = sum(ls.values())
         self.log(
@@ -74,15 +71,21 @@ class VarMisuseLayer(pl.LightningModule):
     def test_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
         return self._shared_eval_step(batch, batch_idx, "test")
 
-    def _shared_eval_step(
-        self, batch: torch.tensor, batch_idx: int, step: str
-    ) -> torch.float32:
+    def _shared_train_eval_step(self, batch: torch.tensor, batch_idx: int):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
+        return is_buggy, loc_predictions, target_probs
+
+    def _shared_eval_step(
+        self, batch: torch.tensor, batch_idx: int, step: str
+    ) -> torch.float32:
+        is_buggy, loc_predictions, target_probs = self._shared_train_eval_step(batch, batch_idx)
+        error_loc = batch[2]
+
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
         acs = self.test_get_acs(is_buggy, loc_predictions, target_probs, error_loc)
         loss = sum(ls.values())
