@@ -1,10 +1,10 @@
 import numpy as np
-from torchmetrics import Accuracy
 import models.util as util
 import torch
 import torch.nn.functional as F
 from models import two_pointer_fcn, encoder_gru
 import pytorch_lightning as pl
+from torch_geometric.nn import GatedGraphConv
 from models.util import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
@@ -31,6 +31,8 @@ class VarMisuseLayer(pl.LightningModule):
             self._model = encoder_gru.EncoderGRU(
                 util.join_dicts(base_config, self._model_config["rnn"]),
             )
+        elif inner_model == "ggsnn":
+            pass
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 

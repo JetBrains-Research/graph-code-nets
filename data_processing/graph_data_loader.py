@@ -26,13 +26,13 @@ class GraphDataModule(pl.LightningDataModule):
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="train_small",
+                mode="train",
             )
             self._val = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev_small",
+                mode="dev",
             )
 
         if stage == "test" or stage is None:
