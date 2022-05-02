@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 import os
-from data_processing.graph_dataset import GraphDataset
+from data_processing.lightning_graph_dataset import GraphDataset
 from data_processing.vocabulary import Vocabulary
 from torch.utils.data import DataLoader
 import torch
@@ -26,13 +26,13 @@ class GraphDataModule(pl.LightningDataModule):
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="train",
+                mode="train_small",
             )
             self._val = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev",
+                mode="dev_small",
             )
 
         if stage == "test" or stage is None:
