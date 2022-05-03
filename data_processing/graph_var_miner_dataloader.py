@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Optional
 
 import pytorch_lightning as pl
 from torch_geometric.data import Dataset
@@ -15,41 +15,55 @@ from data_processing.vocabulary import Vocabulary
 
 
 class GraphVarMinerModule(pl.LightningDataModule):
-    def __init__(self, root: str, vocabulary: Vocabulary, process=False):
+    def __init__(self, config: dict, vocabulary: Vocabulary):
         super().__init__()
-        self._root = os.path.join(root)
+        self._config = config
         self._vocabulary = vocabulary
-        self._process = process
-        self._train: Dataset[Any]
-        self._val: Dataset[Any]
-        self._test: Dataset[Any]
+        self._train: Optional[Dataset[Any]] = None
+        self._validation: Optional[Dataset[Any]] = None
+        self._test: Optional[Dataset[Any]] = None
 
     def prepare_data(self):
         pass
 
-    def setup(self, stage: str = None):
-        if self._process:
+    def _setup_dataset(self, mode: str):
+        process = self._config[mode]["dataset"]["process"]
+
+        if process:
             cls = GraphVarMinerDataset
         else:
             cls = GraphVarMinerDatasetIterable
 
+        setattr(
+            self,
+            f"_{mode}",
+            cls(config=self._config, mode=mode, vocabulary=self._vocabulary),
+        )
+
+    def setup(self, stage: str = None):
+
         if stage == "fit" or stage is None:
-            self._train = cls(
-                root=self._root, mode="train", vocabulary=self._vocabulary
-            )
-            self._val = cls(
-                root=self._root, mode="validation", vocabulary=self._vocabulary
-            )
+            self._setup_dataset("train")
+            self._setup_dataset("validation")
 
         if stage == "test" or stage is None:
-            self._test = cls(root=self._root, mode="test", vocabulary=self._vocabulary)
+            self._setup_dataset("test")
+
+    def _get_dataloader(self, mode: str):
+        dataset = getattr(self, f"_{mode}")
+        dataloader_config = self._config["train"]["dataloader"]
+        return DataLoader(
+            dataset,
+            batch_size=dataloader_config["batch_size"],
+            num_workers=dataloader_config["num_workers"],
+        )
 
     # shuffle is not supported due to IterableDataset
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self._train, batch_size=64, num_workers=2)
+        return self._get_dataloader("train")
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self._val, batch_size=64, num_workers=2)
+        return self._get_dataloader("validation")
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self._test, batch_size=64, num_workers=2)
+        return self._get_dataloader("test")
