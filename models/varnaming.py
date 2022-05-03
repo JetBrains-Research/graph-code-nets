@@ -13,20 +13,35 @@ from models.utils import generate_square_subsequent_mask, generate_padding_mask
 
 
 class VarNamingModel(pl.LightningModule):
-    def __init__(self, vocabulary: Vocabulary) -> None:
+    def __init__(self, config: dict, vocabulary: Vocabulary) -> None:
         super().__init__()
 
+        self.config = config
         self.vocabulary = vocabulary
-        self.src_emb_size = 10
-        self.encoder = GCNEncoder(
-            self.src_emb_size, 32
-        )  # torch_geometric.data.Data -> torch.Tensor
-        self.decoder = GraphTransformerDecoder(
-            6, 32, 8, vocabulary.vocab_dim
-        )  # torch.Tensor -> torch.Tensor
+        self.max_token_length = self.config["vocabulary"]["max_token_length"]
+
+        encoder_config = self.config["model"][self.config["model"]["encoder"]]
+        if self.config["model"]["encoder"] == "gcn":
+            self.encoder = GCNEncoder(
+                **encoder_config,
+                in_channels=self.max_token_length,
+            )  # torch_geometric.data.Data -> torch.Tensor [num_nodes, d_model]
+        else:
+            raise ValueError(f"Unknown encoder type: {self.config['model']['encoder']}")
+
+        decoder_config = self.config["model"][self.config["model"]["decoder"]]
+        if self.config["model"]["decoder"] == "transformer_decoder":
+            self.decoder = GraphTransformerDecoder(
+                **decoder_config,
+                target_vocab_size=vocabulary.vocab_dim,
+                max_tokens_length=self.max_token_length,
+            )
+        else:
+            raise ValueError(f"Unknown decoder type: {self.config['model']['encoder']}")
+
         self.loss_fn = torch.nn.CrossEntropyLoss(
-            ignore_index=vocabulary.lookup("<PAD>")
-        )  # TODO perhaps make some varialbes in vocab?
+            ignore_index=vocabulary.lookup(vocabulary.pad)
+        )
 
     def forward(self, batch: Batch) -> Tensor:  # type: ignore
         enc = self.encoder(batch)
@@ -44,14 +59,14 @@ class VarNamingModel(pl.LightningModule):
         # or either make some if-s like: if isinstance(self.decoder, GraphTransformerDecoder):
         target_batch = batch.name
 
-        target_mask = generate_square_subsequent_mask(self.src_emb_size)
+        target_mask = generate_square_subsequent_mask(self.max_token_length)
 
         # TODO: investigate if this mask has any effect
         target_padding_mask = generate_padding_mask(target_batch)
 
         predicted = self.decoder(
             target_batch,  # shape: [batch size, src_emb_size]
-            varname_batch,  # shape: [batch size, 1, 32]
+            varname_batch,  # shape: [batch size, 1, d_model]
             tgt_mask=target_mask,  # shape: [src_emb_size, src_emb_size]
             tgt_key_padding_mask=target_padding_mask,  # shape: [batch size, src_emb_size]
         )  # shape: [batch size, src_emb_size, target vocabulary dim]
@@ -85,7 +100,8 @@ class VarNamingModel(pl.LightningModule):
     def configure_optimizers(self):
         # TODO add optimizer config
         optimizer = torch.optim.Adam(
-            itertools.chain(self.encoder.parameters(), self.decoder.parameters())
+            itertools.chain(self.encoder.parameters(), self.decoder.parameters()),
+            lr=self.config["train"]["learning_rate"],
         )
         # TODO lr_scheduler?
         return {

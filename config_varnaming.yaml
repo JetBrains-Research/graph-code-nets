@@ -1,0 +1,50 @@
+model:
+  encoder: "gcn"
+  decoder: "transformer_decoder"
+  gcn:
+    out_channels: 512
+    hidden_channels: 64
+    num_layers: 1
+  transformer_decoder:
+    num_layers: 6
+    d_model: 512
+    dim_feedforward: 2048
+    nhead: 8
+    dropout: 0.1
+
+vocabulary:
+  path: "vocab.txt"
+  max_token_length: 10  # In terms of (BPE) sub-tokens.
+
+train:
+  max_steps: 100
+  learning_rate: 0.0001
+
+  dataset:
+    root: ~
+    process: False
+    debug: False
+
+  dataloader:
+    batch_size: 64
+    num_workers: 8
+
+validation:
+  dataset:
+    root: ~
+    process: False
+    debug: False
+
+  dataloader:
+    batch_size: 64
+    num_workers: 8
+
+test:
+  dataset:
+    root: ~
+    process: False
+    debug: False
+
+  dataloader:
+    batch_size: 64
+    num_workers: 8

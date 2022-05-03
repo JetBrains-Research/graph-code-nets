@@ -9,13 +9,15 @@ class Vocabulary:
         self.w2i = None
         self.i2w = None
         self.vocab_path = vocab_path
+        self.pad = "<PAD>"
+        self.eow = "#"  # end of word
         self.load_vocab()
 
     def load_vocab(self):
         with open(self.vocab_path, encoding="utf-8") as f:
             subtokens = [l.rstrip() for l in f]
         self.i2w = {ix + 1: w for ix, w in enumerate(subtokens)}
-        self.i2w[0] = "<PAD>"
+        self.i2w[0] = self.pad
         self.w2i = {w: ix for ix, w in self.i2w.items()}
         self.vocab_dim = len(self.i2w)
 
@@ -32,10 +34,10 @@ class Vocabulary:
         )
 
     def lookup(self, token):
-        return self.w2i[token] if token in self.w2i else self.w2i["<PAD>"]
+        return self.w2i[token] if token in self.w2i else self.w2i[self.pad]
 
     def tokenize(self, token):
-        token += "#"  # Add terminal symbol first
+        token += self.eow  # Add terminal symbol first
         tokens = []
         ix = 0
         if token in self.bpe_cache:

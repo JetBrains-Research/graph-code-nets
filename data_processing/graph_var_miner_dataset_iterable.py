@@ -35,32 +35,33 @@ _graph_var_miner_edge_types_to_idx = dict(
 class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def __init__(
         self,
-        root: str,
+        config: dict,
         mode: str,
         vocabulary: Vocabulary,
-        max_token_len: int = 10,
         *,
         transform=None,
         pre_transform=None,
         pre_filter=None,
-        debug=False,
     ):
+        self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
-        self._max_token_len = max_token_len
 
-        self._raw_data_path = pathlib.Path(root, mode)
+        self._root = self._config[self._mode]["dataset"]["root"]
+        self._max_token_len = self._config["vocabulary"]["max_token_length"]
+        self._debug = self._config[self._mode]["dataset"]["debug"]
+
+        self._raw_data_path = pathlib.Path(self._root, mode)
         if not self._raw_data_path.exists():
             raise FileNotFoundError()
 
         self._data_files: list[pathlib.Path] = [
             f for f in self._raw_data_path.iterdir() if f.is_file()
         ]
-        self._debug = debug
 
         self.__data_sample: Optional[Data] = None
 
-        super().__init__(root, transform, pre_transform, pre_filter)
+        super().__init__(self._root, transform, pre_transform, pre_filter)
 
     def _item_from_dict(self, dct) -> Data:
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
