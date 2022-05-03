@@ -2,17 +2,19 @@ paths:
   data: "/home/timav/jb/graph-code-nets/data"
   vocab: "/home/timav/jb/graph-code-nets/vocab.txt"
 model:
-  configuration: "rnn"
+  configuration: "ggnn"
   base:
     hidden_dim: 128
     dropout_rate: 0.1
     num_edge_types: 24
   rnn:
     num_layers: 2
+  ggnn:
+    num_layers: 2
 data:
-  batch_size: 2 # In samples
+  batch_size: 1 # In samples
   max_sequence_length: 256
-  max_token_length: 10  # In terms of (BPE) sub-tokens.
+  max_token_length: 8  # In terms of (BPE) sub-tokens.
 training:
   max_steps: 100
   print_freq: 25

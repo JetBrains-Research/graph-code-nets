@@ -28,7 +28,14 @@ class EdgeTypes(Enum):
 
 
 class GraphDataset(Dataset):
-    def __init__(self, data_path: str, vocabulary: Vocabulary, config: dict, mode: str, debug: bool = False):
+    def __init__(
+        self,
+        data_path: str,
+        vocabulary: Vocabulary,
+        config: dict,
+        mode: str,
+        debug: bool = False,
+    ):
         super().__init__()
         self._data_path = os.path.join(data_path, mode)
         self._vocabulary = vocabulary

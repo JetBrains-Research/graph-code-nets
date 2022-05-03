@@ -2,7 +2,7 @@ import numpy as np
 import models.util as util
 import torch
 import torch.nn.functional as F
-from models import two_pointer_fcn, encoder_gru
+from models import two_pointer_fcn, encoder_gru, encoder_ggnn
 import pytorch_lightning as pl
 from models.util import (
     sparse_categorical_accuracy,
@@ -30,6 +30,10 @@ class VarMisuseLayer(pl.LightningModule):
             self._model = encoder_gru.EncoderGRU(
                 util.join_dicts(base_config, self._model_config["rnn"]),
             )
+        elif inner_model == "ggnn":
+            self._model = encoder_ggnn.EncoderGGNN(
+                util.join_dicts(base_config, self._model_config["ggnn"]),
+            )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
@@ -46,11 +50,30 @@ class VarMisuseLayer(pl.LightningModule):
             self._device
         )
         states = torch.mean(subtoken_embeddings, 2)
-        predictions = torch.transpose(self._prediction(self._model(states)[0]), 1, 2)
-        return predictions
+        if self._model_config["configuration"] == "rnn":
+            predictions = torch.transpose(
+                self._prediction(self._model(states)[0]), 1, 2
+            )
+            return predictions
+
+        elif self._model_config["configuration"] == "ggnn":
+            predictions = list()
+            for i in range(len(tokens)):
+                test_predictions = self._model(
+                    states[i].float(),
+                    torch.transpose(
+                        torch.tensor([[e[1], e[2]] for e in edges if e[0] == i]), 0, 1
+                    ).to(self._device),
+                )
+                predictions.append(test_predictions)
+            predictions = torch.stack(predictions).to(self._device)
+            predictions = torch.transpose(self._prediction(predictions), 1, 2)
+            return predictions
 
     def training_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
-        is_buggy, loc_predictions, target_probs = self._shared_train_eval_step(batch, batch_idx)
+        is_buggy, loc_predictions, target_probs = self._shared_train_eval_step(
+            batch, batch_idx
+        )
         error_loc = batch[2]
 
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
@@ -82,7 +105,9 @@ class VarMisuseLayer(pl.LightningModule):
     def _shared_eval_step(
         self, batch: torch.tensor, batch_idx: int, step: str
     ) -> torch.float32:
-        is_buggy, loc_predictions, target_probs = self._shared_train_eval_step(batch, batch_idx)
+        is_buggy, loc_predictions, target_probs = self._shared_train_eval_step(
+            batch, batch_idx
+        )
         error_loc = batch[2]
 
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
