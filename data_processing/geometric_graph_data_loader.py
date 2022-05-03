@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 import os
-from data_processing.lightning_graph_dataset import GraphDataset
+from data_processing.geometric_graph_dataset import GraphDataset
 from data_processing.vocabulary import Vocabulary
 from torch.utils.data import DataLoader
 import torch
@@ -71,7 +71,7 @@ class GraphDataModule(pl.LightningDataModule):
         batch = [
             (
                 e["tokens"],
-                e["edges"],
+                e["edge_index"],
                 e["error_location"],
                 e["repair_targets"],
                 e["repair_candidates"],
@@ -112,7 +112,7 @@ class GraphDataModule(pl.LightningDataModule):
         )
         edge_tensor = torch.tensor(np.concatenate(batch[1]))
         edge_tensor = torch.stack(
-            [edge_tensor[:, 0], edge_batches, edge_tensor[:, 1], edge_tensor[:, 2]],
+            [edge_batches, edge_tensor[:, 0], edge_tensor[:, 1]],
             dim=1,
         )
 
@@ -134,7 +134,6 @@ class GraphDataModule(pl.LightningDataModule):
         )
         repair_candidates = torch.tensor(np.concatenate(batch[4]))
         repair_candidates = torch.stack([candidates_batches, repair_candidates], dim=1)
-
         return (
             token_tensor,
             edge_tensor,

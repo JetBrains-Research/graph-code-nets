@@ -2,7 +2,6 @@ import os
 import json
 from typing import Any
 
-import torch
 from torch_geometric.data import Dataset
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
@@ -40,11 +39,11 @@ class GraphDataset(Dataset):
         self._pref_sum_lines = get_files_count_lines(self._data_path)
         self._length = self._pref_sum_lines[-1]
 
-    def len(self) -> int:
+    def __len__(self) -> int:
         return self._length
 
-    def getitem(self, idx: int) -> dict[str, Any]:
-        file_index, line_index = get_file_index(self._pref_sum_lines, idx)
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
         return self.process_line(
             get_line_by_offset(
@@ -56,12 +55,12 @@ class GraphDataset(Dataset):
 
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
         def _parse_edges(edges: list):
-            _edge_index = [[rel[0] for rel in edges], [rel[1] for rel in edges]]
+            _edge_index = [[rel[0], rel[1]] for rel in edges]
             _edge_attr = [rel[2] for rel in edges]
             return _edge_index, _edge_attr
 
         tokens = [
-            self._vocabulary.translate(t)[: self._config["data"]["token_length"]]
+            self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
         edge_index, edge_attr = _parse_edges(json_data["edges"])
@@ -72,7 +71,6 @@ class GraphDataset(Dataset):
         ]
         return {
             "edge_index": edge_index,
-            "edge_attr": edge_attr,
             "tokens": tokens,
             "error_location": error_location,
             "repair_targets": repair_targets,

@@ -10,7 +10,7 @@ model:
   rnn:
     num_layers: 2
 data:
-  batch_size: 1 # In samples
+  batch_size: 2 # In samples
   max_sequence_length: 256
   max_token_length: 10  # In terms of (BPE) sub-tokens.
 training:
