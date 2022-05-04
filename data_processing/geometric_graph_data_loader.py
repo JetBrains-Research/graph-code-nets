@@ -112,8 +112,7 @@ class GraphDataModule(pl.LightningDataModule):
         )
         edge_tensor = torch.tensor(np.concatenate(batch[1]))
         edge_tensor = torch.stack(
-            [edge_batches, edge_tensor[:, 0], edge_tensor[:, 1]],
-            dim=1,
+            [edge_batches, edge_tensor[:, 0], edge_tensor[:, 1]], dim=1,
         )
 
         # simple constant list
