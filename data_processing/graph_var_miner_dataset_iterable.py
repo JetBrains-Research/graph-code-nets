@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import IterableDataset
 from torch_geometric.data import Data, Dataset
 
-from data_processing.vocabulary import Vocabulary
+from data_processing.vocabulary.vocabulary import Vocabulary
 
 _graph_var_miner_edge_types = [
     "NextToken",
@@ -51,12 +51,12 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
 
-        self._raw_data_path = pathlib.Path(self._root, mode)
-        if not self._raw_data_path.exists():
+        _raw_data_path = pathlib.Path(self._root, mode)
+        if not _raw_data_path.exists():
             raise FileNotFoundError()
 
         self._data_files: list[pathlib.Path] = [
-            f for f in self._raw_data_path.iterdir() if f.is_file()
+            f for f in _raw_data_path.iterdir() if f.is_file()
         ]
 
         self.__data_sample: Optional[Data] = None
@@ -95,7 +95,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             map(
                 lambda x: list(np.pad(x, (0, self._max_token_len - len(x)))),
                 map(
-                    lambda x: self._vocabulary.translate(x)[: self._max_token_len],
+                    lambda x: self._vocabulary.encode(x)[: self._max_token_len],
                     tokens,
                 ),
             )

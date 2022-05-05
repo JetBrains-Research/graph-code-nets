@@ -10,7 +10,7 @@ import torch
 from torch_geometric.data import Data, Dataset
 from tqdm import tqdm
 
-from data_processing.vocabulary import Vocabulary
+from data_processing.vocabulary.vocabulary import Vocabulary
 
 _graph_var_miner_edge_types = [
     "NextToken",
@@ -137,7 +137,7 @@ class GraphVarMinerDataset(Dataset):
             map(
                 lambda x: list(np.pad(x, (0, self._max_token_len - len(x)))),
                 map(
-                    lambda x: self._vocabulary.translate(x)[: self._max_token_len],
+                    lambda x: self._vocabulary.encode(x)[: self._max_token_len],
                     tokens,
                 ),
             )

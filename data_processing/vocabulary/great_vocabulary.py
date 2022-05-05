@@ -1,7 +1,10 @@
 from collections import defaultdict
+from typing import Iterable
+
+from data_processing.vocabulary.vocabulary import Vocabulary
 
 
-class Vocabulary:
+class GreatVocabulary(Vocabulary):
     def __init__(self, vocab_path):
         self.bpe_lookup_dict = None
         self.bpe_cache = None
@@ -12,6 +15,18 @@ class Vocabulary:
         self.pad = "<PAD>"
         self.eow = "#"  # end of word
         self.load_vocab()
+
+    def __len__(self):
+        return self.vocab_dim
+
+    def encode(self, token: str) -> list[int]:
+        return self.translate(token)
+
+    def decode(self, encoded: list[int]) -> str:
+        return "".join(map(lambda i: self.i2w[i], encoded))
+
+    def pad_id(self) -> int:
+        return self.lookup(self.pad)
 
     def load_vocab(self):
         with open(self.vocab_path, encoding="utf-8") as f:

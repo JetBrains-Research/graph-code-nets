@@ -6,7 +6,7 @@ from pytorch_lightning.utilities.types import STEP_OUTPUT
 from torch import Tensor
 from torch_geometric.data import Batch
 
-from data_processing.vocabulary import Vocabulary
+from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
 from models.utils import generate_square_subsequent_mask, generate_padding_mask
@@ -33,15 +33,13 @@ class VarNamingModel(pl.LightningModule):
         if self.config["model"]["decoder"] == "transformer_decoder":
             self.decoder = GraphTransformerDecoder(
                 **decoder_config,
-                target_vocab_size=vocabulary.vocab_dim,
+                target_vocab_size=len(vocabulary),
                 max_tokens_length=self.max_token_length,
             )
         else:
             raise ValueError(f"Unknown decoder type: {self.config['model']['encoder']}")
 
-        self.loss_fn = torch.nn.CrossEntropyLoss(
-            ignore_index=vocabulary.lookup(vocabulary.pad)
-        )
+        self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=vocabulary.pad_id())
 
     def forward(self, batch: Batch) -> Tensor:  # type: ignore
         enc = self.encoder(batch)

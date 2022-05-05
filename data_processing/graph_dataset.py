@@ -1,18 +1,19 @@
-import os
 import json
-import torch
-import numpy as np
+import os
+from enum import Enum
 from typing import Any
+
+import numpy as np
+import torch
+from commode_utils.filesystem import get_line_by_offset
 from torch.utils.data import Dataset
 
-from data_processing.vocabulary import Vocabulary
-from enum import Enum
-from commode_utils.filesystem import get_line_by_offset
 from data_processing.commode_utils_extension import (
     get_files_count_lines,
     get_files_offsets,
     get_file_index,
 )
+from data_processing.vocabulary.vocabulary import Vocabulary
 
 
 class EdgeTypes(Enum):
@@ -70,7 +71,7 @@ class GraphDataset(Dataset):
             return relations
 
         tokens = [
-            self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
+            self._vocabulary.encode(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
         tokens_tensor = self._process_tokens(tokens)

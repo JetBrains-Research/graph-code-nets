@@ -1,8 +1,10 @@
-import pytorch_lightning as pl
 import os
-from data_processing.graph_dataset import GraphDataset
-from data_processing.vocabulary import Vocabulary
+
+import pytorch_lightning as pl
 from torch.utils.data import DataLoader
+
+from data_processing.graph_dataset import GraphDataset
+from data_processing.vocabulary.vocabulary import Vocabulary
 
 
 class GraphDataModule(pl.LightningDataModule):

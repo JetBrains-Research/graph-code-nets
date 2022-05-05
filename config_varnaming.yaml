@@ -13,8 +13,9 @@ model:
     dropout: 0.1
 
 vocabulary:
-  path: "vocab.txt"
-  max_token_length: 10  # In terms of (BPE) sub-tokens.
+  type: 'spm'
+  path: "spm.model"
+  max_token_length: 20  # In terms of (BPE) sub-tokens.
 
 train:
   max_steps: 100

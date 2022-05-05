@@ -1,4 +1,3 @@
-import os
 from typing import Any, Optional
 
 import pytorch_lightning as pl
@@ -11,7 +10,7 @@ from data_processing.graph_var_miner_dataset import GraphVarMinerDataset
 from data_processing.graph_var_miner_dataset_iterable import (
     GraphVarMinerDatasetIterable,
 )
-from data_processing.vocabulary import Vocabulary
+from data_processing.vocabulary.vocabulary import Vocabulary
 
 
 class GraphVarMinerModule(pl.LightningDataModule):
