@@ -21,13 +21,7 @@ data.setup("fit")
 # data.setup("test")
 model = VarMisuseLayer(config, vocab.vocab_dim)
 wandb_logger = WandbLogger()
-trainer = pl.Trainer(
-    accelerator="gpu",
-    devices=1,
-    max_epochs=2,
-    val_check_interval=0.1,
-    logger=wandb_logger,
-)
+trainer = pl.Trainer(accelerator="gpu", devices=1, max_epochs=2, val_check_interval=0.1)
 trainer.fit(
     model=model,
     train_dataloaders=data.train_dataloader(),

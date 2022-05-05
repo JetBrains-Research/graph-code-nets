@@ -2,6 +2,7 @@ import os
 import json
 from typing import Any
 
+import torch
 from torch_geometric.data import Dataset
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
@@ -59,7 +60,6 @@ class GraphDataset(Dataset):
         )
 
     def _parse_line(self, json_data: dict) -> dict[str, Any]:
-
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
         def _parse_edges(edges: list):
             _edge_index = [[rel[0], rel[1]] for rel in edges]
@@ -76,6 +76,17 @@ class GraphDataset(Dataset):
         repair_candidates = [
             t for t in json_data["repair_candidates"] if isinstance(t, int)
         ]
+        error_location_labels = torch.zeros(
+            len(json_data["source_tokens"]), dtype=torch.float32
+        ).scatter_(0, torch.tensor(error_location), 1.0)
+        repair_targets_labels = torch.zeros(
+            len(json_data["source_tokens"]), dtype=torch.float32
+        ).scatter_(0, torch.tensor(repair_targets), 1.0)
+        repair_candidates_labels = torch.zeros(
+            len(json_data["source_tokens"]), dtype=torch.float32
+        ).scatter_(0, torch.tensor(repair_candidates), 1.0)
+        labels = torch.stack([error_location_labels, repair_targets_labels, repair_candidates_labels], 0)
+        print(labels)
         return {
             "edge_index": edge_index,
             "tokens": tokens,

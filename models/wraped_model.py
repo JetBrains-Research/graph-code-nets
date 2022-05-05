@@ -28,11 +28,11 @@ class VarMisuseLayer(pl.LightningModule):
         self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
         if inner_model == "rnn":
             self._model = encoder_gru.EncoderGRU(
-                util.join_dicts(base_config, self._model_config["rnn"]),
+                util.join_dicts(base_config, self._model_config["rnn"])
             )
         elif inner_model == "ggnn":
             self._model = encoder_ggnn.EncoderGGNN(
-                util.join_dicts(base_config, self._model_config["ggnn"]),
+                util.join_dicts(base_config, self._model_config["ggnn"])
             )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
