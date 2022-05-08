@@ -5,13 +5,6 @@ def join_dicts(d1: dict, d2: dict) -> dict:
     return {**d1, **d2}
 
 
-def prefix_sum(arr) -> list:
-    res = [0]
-    for a in arr:
-        res.append(res[-1] + a)
-    return res
-
-
 def sparse_categorical_accuracy(
     y_true: torch.Tensor, y_pred: torch.Tensor
 ) -> torch.Tensor:
