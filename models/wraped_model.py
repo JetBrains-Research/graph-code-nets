@@ -67,8 +67,12 @@ class VarMisuseLayer(pl.LightningModule):
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
-        losses = self.test_get_losses(is_buggy, loc_predictions, target_probs, error_loc)
-        accuracies = self.test_get_accuracies(is_buggy, loc_predictions, target_probs, error_loc)
+        losses = self.test_get_losses(
+            is_buggy, loc_predictions, target_probs, error_loc
+        )
+        accuracies = self.test_get_accuracies(
+            is_buggy, loc_predictions, target_probs, error_loc
+        )
         total_loss: torch.Tensor = sum(losses.values())  # type: ignore[assignment]
         self.log(
             step + "_loss",
@@ -153,8 +157,12 @@ class VarMisuseLayer(pl.LightningModule):
         )
         if torch.sum(1 - is_buggy) == 0:
             no_bug_pred_acc = torch.tensor(1)
-        bug_loc_acc = torch.sum(is_buggy * loc_accuracies) / (1e-9 + torch.sum(is_buggy))
-        target_loc_acc = torch.sum(is_buggy * rep_accuracies) / (1e-9 + torch.sum(is_buggy))
+        bug_loc_acc = torch.sum(is_buggy * loc_accuracies) / (
+            1e-9 + torch.sum(is_buggy)
+        )
+        target_loc_acc = torch.sum(is_buggy * rep_accuracies) / (
+            1e-9 + torch.sum(is_buggy)
+        )
         joint_acc = torch.sum(is_buggy * loc_accuracies * rep_accuracies) / (
             1e-9 + torch.sum(is_buggy)
         )
