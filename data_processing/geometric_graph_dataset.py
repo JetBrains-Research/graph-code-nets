@@ -86,7 +86,9 @@ class GraphDataset(Dataset):
         repair_candidates_labels = torch.zeros(
             len(json_data["source_tokens"]), dtype=torch.float32
         ).scatter_(0, torch.tensor(repair_candidates), 1.0)
-        labels = torch.stack([error_location_labels, repair_targets_labels, repair_candidates_labels], 0)
+        labels = torch.stack(
+            [error_location_labels, repair_targets_labels, repair_candidates_labels], 0
+        )
         return_data = Data(x=torch.tensor(tokens), edge_index=edge_index, y=labels)
         print(return_data)
         return {
