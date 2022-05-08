@@ -50,22 +50,7 @@ class VarMisuseLayer(pl.LightningModule):
         return predictions
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        tokens, edges, error_loc, repair_targets, repair_candidates = batch
-        token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
-        pointer_preds = self(tokens, token_mask, edges)
-        is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
-            pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
-        )
-        losses = self.test_get_losses(is_buggy, loc_predictions, target_probs, error_loc)
-        total_loss: torch.Tensor = sum(losses.values())  # type: ignore[assignment]
-        self.log(
-            "training_loss",
-            losses,
-            prog_bar=True,
-            on_epoch=True,
-            batch_size=self._data_config["batch_size"],
-        )
-        return total_loss
+        return self._shared_eval_step(batch, batch_idx, "train")
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "val")
