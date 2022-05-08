@@ -1,6 +1,6 @@
 paths:
-  data: "data"
-  vocab: "vocab.txt"
+  data: "../data"
+  vocab: "../vocab.txt"
 model:
   configuration: "rnn"
   base:
