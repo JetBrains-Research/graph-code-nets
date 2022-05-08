@@ -1,7 +1,6 @@
 import os
 import json
-from typing import Any
-
+import numpy as np
 import torch
 from torch_geometric.data import Dataset, Data
 from data_processing.vocabulary import Vocabulary
@@ -50,7 +49,7 @@ class GraphDataset(Dataset):
     def __len__(self) -> int:
         return self._length
 
-    def __getitem__(self, index: int) -> dict[str, Any]:
+    def __getitem__(self, index: int) -> Data:
         file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
         return self.process_line(
@@ -59,7 +58,7 @@ class GraphDataset(Dataset):
             )
         )
 
-    def _parse_line(self, json_data: dict) -> dict[str, Any]:
+    def _parse_line(self, json_data: dict) -> Data:
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
         def _parse_edges(edges: list) -> tuple[torch.tensor, torch.tensor]:
             _edge_index = [[rel[0], rel[1]] for rel in edges]
@@ -70,7 +69,13 @@ class GraphDataset(Dataset):
             self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
-        print(tokens)
+        tokens = torch.tensor(
+            [
+                np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
+                for x in tokens
+            ]
+        )
+
         edge_index, edge_attr = _parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
@@ -89,15 +94,8 @@ class GraphDataset(Dataset):
         labels = torch.stack(
             [error_location_labels, repair_targets_labels, repair_candidates_labels], 0
         )
-        return_data = Data(x=torch.tensor(tokens), edge_index=edge_index, y=labels)
-        print(return_data)
-        return {
-            "edge_index": edge_index,
-            "tokens": tokens,
-            "error_location": error_location,
-            "repair_targets": repair_targets,
-            "repair_candidates": repair_candidates,
-        }
+        return_data = Data(tokens, edge_index=edge_index, y=labels)
+        return return_data
 
-    def process_line(self, line: str) -> dict[str, Any]:
+    def process_line(self, line: str) -> Data:
         return self._parse_line(json.loads(line))

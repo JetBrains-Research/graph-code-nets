@@ -68,6 +68,7 @@ class GraphDataModule(pl.LightningDataModule):
         )
 
     def _collate_fn(self, batch) -> tuple:
+        print(batch)
         batch = [
             (
                 e["tokens"],
