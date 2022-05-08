@@ -34,13 +34,13 @@ class VarMisuseLayer(pl.LightningModule):
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
-    def forward(
-        self, tokens: torch.tensor, token_mask: torch.tensor, edges: torch.tensor
-    ) -> torch.tensor:
+    def forward(  # type: ignore[override]
+        self, tokens: torch.Tensor, token_mask: torch.Tensor, edges: torch.Tensor
+    ) -> torch.Tensor:
         original_shape = list(
             np.append(np.array(tokens.shape), self._model_config["base"]["hidden_dim"])
         )
-        flat_tokens = tokens.type(torch.LongTensor).flatten().to(self._device)
+        flat_tokens = tokens.type(torch.long).flatten().to(self._device)
         subtoken_embeddings = self._embedding(flat_tokens)
         subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
         subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1).to(
@@ -50,7 +50,7 @@ class VarMisuseLayer(pl.LightningModule):
         predictions = torch.transpose(self._prediction(self._model(states)[0]), 1, 2)
         return predictions
 
-    def training_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
+    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
@@ -58,7 +58,7 @@ class VarMisuseLayer(pl.LightningModule):
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
-        loss = sum(ls.values())
+        loss: torch.Tensor = sum(ls.values())  # type: ignore[assignment]
         self.log(
             "training_loss",
             ls,
@@ -68,15 +68,15 @@ class VarMisuseLayer(pl.LightningModule):
         )
         return loss
 
-    def validation_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
+    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "val")
 
-    def test_step(self, batch: torch.tensor, batch_idx: int) -> torch.float32:
+    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "test")
 
     def _shared_eval_step(
-        self, batch: torch.tensor, batch_idx: int, step: str
-    ) -> torch.float32:
+        self, batch: torch.Tensor, batch_idx: int, step: str
+    ) -> torch.Tensor:
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
@@ -85,7 +85,7 @@ class VarMisuseLayer(pl.LightningModule):
         )
         ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
         acs = self.test_get_acs(is_buggy, loc_predictions, target_probs, error_loc)
-        loss = sum(ls.values())
+        loss: torch.Tensor = sum(ls.values())  # type: ignore[assignment]
         self.log(
             step + "_loss",
             ls,
@@ -102,19 +102,19 @@ class VarMisuseLayer(pl.LightningModule):
         )
         return loss
 
-    def configure_optimizers(self) -> torch.optim:
+    def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.Adam(
             self.parameters(), lr=self._training_config["learning_rate"]
         )
 
     def _shared_loss_acs_calc(
         self,
-        predictions: torch.tensor,
-        token_mask: torch.tensor,
-        error_locations: torch.tensor,
-        repair_targets: torch.tensor,
-        repair_candidates: torch.tensor,
-    ) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
+        predictions: torch.Tensor,
+        token_mask: torch.Tensor,
+        error_locations: torch.Tensor,
+        repair_targets: torch.Tensor,
+        repair_candidates: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         seq_mask = token_mask.float()
         predictions += (1.0 - torch.unsqueeze(seq_mask, 1)) * torch.finfo(
             torch.float32
@@ -123,29 +123,29 @@ class VarMisuseLayer(pl.LightningModule):
         loc_predictions = predictions[:, 0]
         pointer_logits = predictions[:, 1]
 
-        candidate_mask = np.zeros(pointer_logits.size())
+        candidate_mask = torch.zeros(pointer_logits.size())
         for e in repair_candidates:
             candidate_mask[e[0]][e[1]] = 1
-        candidate_mask = torch.tensor(candidate_mask).to(self._device)
+        candidate_mask = candidate_mask.to(self._device)
 
         pointer_logits += (1.0 - candidate_mask) * torch.finfo(torch.float32).min
         pointer_probs = F.softmax(pointer_logits, dim=-1)
 
-        target_mask = np.zeros(pointer_probs.size())
+        target_mask = torch.zeros(pointer_probs.size())
         for e in repair_targets:
             target_mask[e[0]][e[1]] = 1
-        target_mask = torch.tensor(target_mask).to(self._device)
+        target_mask = target_mask.to(self._device)
         target_probs = torch.sum(target_mask * pointer_probs, -1)
 
         return is_buggy, loc_predictions, target_probs
 
     def test_get_loss(
         self,
-        is_buggy: torch.tensor,
-        loc_predictions: torch.tensor,
-        target_probs: torch.tensor,
-        error_locations: torch.tensor,
-    ) -> dict[str, torch.tensor]:
+        is_buggy: torch.Tensor,
+        loc_predictions: torch.Tensor,
+        target_probs: torch.Tensor,
+        error_locations: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         loc_loss = sparse_softmax_cross_entropy_with_logits(
             error_locations, loc_predictions
         )
@@ -157,18 +157,18 @@ class VarMisuseLayer(pl.LightningModule):
 
     def test_get_acs(
         self,
-        is_buggy: torch.tensor,
-        loc_predictions: torch.tensor,
-        target_probs: torch.tensor,
-        error_locations: torch.tensor,
-    ) -> dict[str, torch.tensor]:
-        rep_accs = (target_probs >= 0.5).type(torch.FloatTensor).to(self._device)
+        is_buggy: torch.Tensor,
+        loc_predictions: torch.Tensor,
+        target_probs: torch.Tensor,
+        error_locations: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        rep_accs = (target_probs >= 0.5).type(torch.float32).to(self._device)
         loc_accs = sparse_categorical_accuracy(error_locations, loc_predictions)
         no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
             1e-9 + torch.sum(1 - is_buggy)
         )
         if torch.sum(1 - is_buggy) == 0:
-            no_bug_pred_acc = 1
+            no_bug_pred_acc = torch.tensor(1)
         bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))
         target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
         joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (

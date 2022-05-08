@@ -8,5 +8,5 @@ class TwoPointerFCN(pl.LightningModule):
         self.hidden_dim = model_config["hidden_dim"]
         self.layer = torch.nn.Linear(self.hidden_dim, 2)
 
-    def forward(self, states: torch.tensor) -> torch.tensor:
+    def forward(self, states: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
         return self.layer(states)

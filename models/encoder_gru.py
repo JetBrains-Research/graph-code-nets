@@ -17,5 +17,5 @@ class EncoderGRU(pl.LightningModule):
             bidirectional=True,
         )
 
-    def forward(self, states: torch.tensor) -> torch.tensor:
+    def forward(self, states: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
         return self.rnn(states)
