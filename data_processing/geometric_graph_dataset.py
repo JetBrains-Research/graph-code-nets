@@ -3,7 +3,7 @@ import json
 from typing import Any
 
 import torch
-from torch_geometric.data import Dataset
+from torch_geometric.data import Dataset, Data
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
 from commode_utils.filesystem import get_line_by_offset
@@ -61,15 +61,16 @@ class GraphDataset(Dataset):
 
     def _parse_line(self, json_data: dict) -> dict[str, Any]:
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
-        def _parse_edges(edges: list):
+        def _parse_edges(edges: list) -> tuple[torch.tensor, torch.tensor]:
             _edge_index = [[rel[0], rel[1]] for rel in edges]
             _edge_attr = [rel[2] for rel in edges]
-            return _edge_index, _edge_attr
+            return torch.tensor(_edge_index), torch.tensor(_edge_attr)
 
         tokens = [
             self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
+        print(tokens)
         edge_index, edge_attr = _parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
@@ -86,7 +87,8 @@ class GraphDataset(Dataset):
             len(json_data["source_tokens"]), dtype=torch.float32
         ).scatter_(0, torch.tensor(repair_candidates), 1.0)
         labels = torch.stack([error_location_labels, repair_targets_labels, repair_candidates_labels], 0)
-        print(labels)
+        return_data = Data(x=torch.tensor(tokens), edge_index=edge_index, y=labels)
+        print(return_data)
         return {
             "edge_index": edge_index,
             "tokens": tokens,
