@@ -1,5 +1,4 @@
 import numpy as np
-from torchmetrics import Accuracy
 import models.util as util
 import torch
 import torch.nn.functional as F
