@@ -56,16 +56,16 @@ class VarMisuseLayer(pl.LightningModule):
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
-        ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
-        loss: torch.Tensor = sum(ls.values())  # type: ignore[assignment]
+        losses = self.test_get_losses(is_buggy, loc_predictions, target_probs, error_loc)
+        total_loss: torch.Tensor = sum(losses.values())  # type: ignore[assignment]
         self.log(
             "training_loss",
-            ls,
+            losses,
             prog_bar=True,
             on_epoch=True,
             batch_size=self._data_config["batch_size"],
         )
-        return loss
+        return total_loss
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "val")
@@ -82,24 +82,24 @@ class VarMisuseLayer(pl.LightningModule):
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
-        ls = self.test_get_loss(is_buggy, loc_predictions, target_probs, error_loc)
-        acs = self.test_get_acs(is_buggy, loc_predictions, target_probs, error_loc)
-        loss: torch.Tensor = sum(ls.values())  # type: ignore[assignment]
+        losses = self.test_get_losses(is_buggy, loc_predictions, target_probs, error_loc)
+        accuracies = self.test_get_accuracies(is_buggy, loc_predictions, target_probs, error_loc)
+        total_loss: torch.Tensor = sum(losses.values())  # type: ignore[assignment]
         self.log(
             step + "_loss",
-            ls,
+            losses,
             prog_bar=True,
             on_epoch=True,
             batch_size=self._data_config["batch_size"],
         )
         self.log(
             step + "_acc",
-            acs,
+            accuracies,
             prog_bar=True,
             on_epoch=True,
             batch_size=self._data_config["batch_size"],
         )
-        return loss
+        return total_loss
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.Adam(
@@ -138,7 +138,7 @@ class VarMisuseLayer(pl.LightningModule):
 
         return is_buggy, loc_predictions, target_probs
 
-    def test_get_loss(
+    def test_get_losses(
         self,
         is_buggy: torch.Tensor,
         loc_predictions: torch.Tensor,
@@ -154,23 +154,23 @@ class VarMisuseLayer(pl.LightningModule):
         )
         return {"loc_loss": loc_loss, "target_loss": target_loss}
 
-    def test_get_acs(
+    def test_get_accuracies(
         self,
         is_buggy: torch.Tensor,
         loc_predictions: torch.Tensor,
         target_probs: torch.Tensor,
         error_locations: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
-        rep_accs = (target_probs >= 0.5).type(torch.float32).to(self._device)
-        loc_accs = sparse_categorical_accuracy(error_locations, loc_predictions)
-        no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accs) / (
+        rep_accuracies = (target_probs >= 0.5).type(torch.float32).to(self._device)
+        loc_accuracies = sparse_categorical_accuracy(error_locations, loc_predictions)
+        no_bug_pred_acc = torch.sum((1 - is_buggy) * loc_accuracies) / (
             1e-9 + torch.sum(1 - is_buggy)
         )
         if torch.sum(1 - is_buggy) == 0:
             no_bug_pred_acc = torch.tensor(1)
-        bug_loc_acc = torch.sum(is_buggy * loc_accs) / (1e-9 + torch.sum(is_buggy))
-        target_loc_acc = torch.sum(is_buggy * rep_accs) / (1e-9 + torch.sum(is_buggy))
-        joint_acc = torch.sum(is_buggy * loc_accs * rep_accs) / (
+        bug_loc_acc = torch.sum(is_buggy * loc_accuracies) / (1e-9 + torch.sum(is_buggy))
+        target_loc_acc = torch.sum(is_buggy * rep_accuracies) / (1e-9 + torch.sum(is_buggy))
+        joint_acc = torch.sum(is_buggy * loc_accuracies * rep_accuracies) / (
             1e-9 + torch.sum(is_buggy)
         )
         return {
