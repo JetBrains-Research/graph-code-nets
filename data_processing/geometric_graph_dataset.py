@@ -69,26 +69,50 @@ class GraphDataset(Dataset):
             self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
-        tokens = [
-            np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
-            for x in tokens
-        ]
+        while len(tokens) < self._config["data"]["max_sequence_length"]:
+            tokens.append([0])
+        tokens = tokens[: min(len(tokens), self._config["data"]["max_sequence_length"])]
+        tokens = np.array(
+            [
+                np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
+                for x in tokens
+            ]
+        )
         tokens = torch.tensor(tokens)
 
-        edge_index, edge_attr = _parse_edges(json_data["edges"])
-        error_location = json_data["error_location"]
-        repair_targets = json_data["repair_targets"]
-        repair_candidates = [
-            t for t in json_data["repair_candidates"] if isinstance(t, int)
+        edges = [
+            e
+            for e in json_data["edges"]
+            if (max(e[0], e[1]) < self._config["data"]["max_sequence_length"])
         ]
+        edge_index, edge_attr = _parse_edges(edges)
+
+        error_location = json_data["error_location"]
+        if error_location >= self._config["data"]["max_sequence_length"]:
+            error_location = 0
+
+        repair_targets = list(
+            filter(
+                lambda x: x < self._config["data"]["max_sequence_length"],
+                json_data["repair_targets"],
+            )
+        )
+
+        repair_candidates = list(
+            filter(
+                lambda x: x < self._config["data"]["max_sequence_length"],
+                [t for t in json_data["repair_candidates"] if isinstance(t, int)],
+            )
+        )
+
         error_location_labels = torch.zeros(
-            len(json_data["source_tokens"]), dtype=torch.float32
+            self._config["data"]["max_sequence_length"], dtype=torch.float32
         ).scatter_(0, torch.tensor(error_location), 1.0)
         repair_targets_labels = torch.zeros(
-            len(json_data["source_tokens"]), dtype=torch.float32
+            self._config["data"]["max_sequence_length"], dtype=torch.float32
         ).scatter_(0, torch.tensor(repair_targets), 1.0)
         repair_candidates_labels = torch.zeros(
-            len(json_data["source_tokens"]), dtype=torch.float32
+            self._config["data"]["max_sequence_length"], dtype=torch.float32
         ).scatter_(0, torch.tensor(repair_candidates), 1.0)
         labels = torch.stack(
             [

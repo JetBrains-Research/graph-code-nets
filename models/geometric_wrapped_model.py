@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from models import two_pointer_fcn, encoder_gru, encoder_ggnn
 import pytorch_lightning as pl
-from torch_scatter import scatter
+from torch_geometric.utils import to_dense_batch
 from torch_geometric.data import Data
 from models.util import (
     sparse_categorical_accuracy,
@@ -61,11 +61,41 @@ class VarMisuseLayer(pl.LightningModule):
         return self._shared_eval_step(batch, batch_idx, "test")
 
     def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
-        # print("tokens", batch.x, batch.x.size())
         pointer_preds = self(batch.x, batch.edge_index)
-        # print("pointer_preds", pointer_preds, pointer_preds.size())
-        # print("labels", batch.y, batch.y.size())
-        return torch.sum(pointer_preds, (0, 1))
+        pointer_preds_t = to_dense_batch(pointer_preds, batch.batch)[0]
+        pointer_preds_t = torch.transpose(pointer_preds_t, 1, 2)
+        token_mask = torch.clamp(torch.sum(batch.x, -1), 0, 1)
+        token_mask = to_dense_batch(token_mask, batch.batch)[0]
+        labels_t = to_dense_batch(batch.y, batch.batch)[0]
+        error_loc = torch.nonzero(labels_t[:, :, 0])[:, 1]
+        repair_targets = torch.nonzero(labels_t[:, :, 1])
+        repair_candidates = torch.nonzero(labels_t[:, :, 2])
+
+        is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
+            pointer_preds_t, token_mask, error_loc, repair_targets, repair_candidates
+        )
+        losses = self.test_get_losses(
+            is_buggy, loc_predictions, target_probs, error_loc
+        )
+        accuracies = self.test_get_accuracies(
+            is_buggy, loc_predictions, target_probs, error_loc
+        )
+        total_loss: torch.Tensor = sum(losses.values())  # type: ignore[assignment]
+        self.log(
+            step + "_loss",
+            losses,
+            prog_bar=True,
+            on_epoch=True,
+            batch_size=self._data_config["batch_size"],
+        )
+        self.log(
+            step + "_acc",
+            accuracies,
+            prog_bar=True,
+            on_epoch=True,
+            batch_size=self._data_config["batch_size"],
+        )
+        return total_loss
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.Adam(

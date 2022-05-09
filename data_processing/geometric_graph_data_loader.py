@@ -26,13 +26,13 @@ class GraphDataModule(pl.LightningDataModule):
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="train_small",
+                mode="train",
             )
             self._val = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev_small",
+                mode="dev",
             )
 
         if stage == "test" or stage is None:
@@ -47,19 +47,19 @@ class GraphDataModule(pl.LightningDataModule):
         return DataLoader(
             self._train,
             batch_size=self._config["data"]["batch_size"],
-            num_workers=1,
+            num_workers=8,
         )
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             self._val,
             batch_size=self._config["data"]["batch_size"],
-            num_workers=1,
+            num_workers=8,
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self._test,
             batch_size=self._config["data"]["batch_size"],
-            num_workers=1,
+            num_workers=8,
         )
