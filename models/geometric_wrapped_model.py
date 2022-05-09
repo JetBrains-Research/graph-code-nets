@@ -61,8 +61,10 @@ class VarMisuseLayer(pl.LightningModule):
         return self._shared_eval_step(batch, batch_idx, "test")
 
     def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
+        # print("tokens", batch.x, batch.x.size())
         pointer_preds = self(batch.x, batch.edge_index)
-        print("pointer_preds", pointer_preds, pointer_preds.size())
+        # print("pointer_preds", pointer_preds, pointer_preds.size())
+        # print("labels", batch.y, batch.y.size())
         return torch.sum(pointer_preds, (0, 1))
 
     def configure_optimizers(self) -> torch.optim.Optimizer:

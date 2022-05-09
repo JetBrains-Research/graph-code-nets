@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 from models import two_pointer_fcn, encoder_gru, encoder_ggnn
 import pytorch_lightning as pl
-from torch_geometric.nn import GatedGraphConv
 from models.util import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
@@ -92,6 +91,11 @@ class VarMisuseLayer(pl.LightningModule):
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
         pointer_preds = self(tokens, token_mask, edges)
+        print("pointer_preds", pointer_preds, pointer_preds.size())
+        print("token_mask", token_mask, token_mask.size())
+        print("error_loc", error_loc, error_loc.size())
+        print("repair_targets", repair_targets, repair_targets.size())
+        print("repair_candidates", repair_candidates, repair_candidates.size())
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
         )
