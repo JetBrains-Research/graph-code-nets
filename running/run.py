@@ -1,7 +1,11 @@
 import pytorch_lightning as pl
 from models.wraped_model import VarMisuseLayer
 import yaml
-from data_processing import vocabulary, geometric_graph_data_loader, lightning_graph_data_loader
+from data_processing import (
+    vocabulary,
+    geometric_graph_data_loader,
+    lightning_graph_data_loader,
+)
 from pytorch_lightning.loggers import WandbLogger
 import argparse
 

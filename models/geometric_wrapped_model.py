@@ -42,52 +42,28 @@ class VarMisuseLayer(pl.LightningModule):
             raise ValueError("Unknown model component provided:", inner_model)
 
     def forward(  # type: ignore[override]
-        self, tokens: torch.Tensor, token_mask: torch.Tensor, edges: torch.Tensor
+        self, tokens: torch.Tensor, edges: torch.Tensor
     ) -> torch.Tensor:
-        original_shape = list(
-            np.append(np.array(tokens.shape), self._model_config["base"]["hidden_dim"])
-        )
-        flat_tokens = tokens.type(torch.long).flatten().to(self._device)
-        subtoken_embeddings = self._embedding(flat_tokens)
-        subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
-        subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1).to(
-            self._device
+        subtoken_embeddings = self._embedding(tokens) * torch.unsqueeze(
+            torch.clamp(tokens, 0, 1), -1
         )
         states = torch.mean(subtoken_embeddings, 2)
-        if self._model_config["configuration"] == "rnn":
-            predictions = torch.transpose(
-                self._prediction(self._model(states)[0]), 1, 2
-            )
-            return predictions
+        predictions = self._model(states, edges)
+        return self._prediction(predictions)
 
-        elif self._model_config["configuration"] == "ggnn":
-            predictions = list()
-            for i in range(len(tokens)):
-                test_predictions = self._model(
-                    states[i].float(),
-                    torch.transpose(
-                        torch.tensor([[e[1], e[2]] for e in edges if e[0] == i]), 0, 1
-                    ).to(self._device),
-                )
-                predictions.append(test_predictions)
-            predictions = torch.stack(predictions).to(self._device)
-            predictions = torch.transpose(self._prediction(predictions), 1, 2)
-            return predictions
-
-    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
+    def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "train")
 
-    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
+    def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "val")
 
-    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
+    def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "test")
 
-    def _shared_eval_step(
-        self, batch: Data, batch_idx: int, step: str
-    ) -> torch.Tensor:
-        x = scatter(batch.x, batch.batch, dim=0, reduce="sum")
-        print(x)
+    def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
+        pointer_preds = self(batch.x, batch.edge_index)
+        print("pointer_preds", pointer_preds, pointer_preds.size())
+        return torch.sum(pointer_preds, (0, 1))
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.Adam(

@@ -64,12 +64,16 @@ class VarMisuseLayer(pl.LightningModule):
             for i in range(len(tokens)):
                 test_predictions = self._model(
                     states[i].float(),
-                    torch.transpose(
-                        torch.tensor([[e[1], e[2]] for e in edges if e[0] == i]), 0, 1
+                    torch.tensor(
+                        [
+                            [e[2] for e in edges if e[1] == i],
+                            [e[3] for e in edges if e[1] == i],
+                        ]
                     ).to(self._device),
                 )
                 predictions.append(test_predictions)
             predictions = torch.stack(predictions).to(self._device)
+            print("predictions", predictions, predictions.size())
             predictions = torch.transpose(self._prediction(predictions), 1, 2)
             return predictions
 
@@ -86,10 +90,7 @@ class VarMisuseLayer(pl.LightningModule):
         self, batch: torch.Tensor, batch_idx: int, step: str
     ) -> torch.Tensor:
         tokens, edges, error_loc, repair_targets, repair_candidates = batch
-        print("tokens", tokens)
-        print("tokens sum", torch.sum(tokens, -1))
         token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
-        print("token_mask", token_mask)
         pointer_preds = self(tokens, token_mask, edges)
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds, token_mask, error_loc, repair_targets, repair_candidates

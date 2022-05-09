@@ -70,20 +70,10 @@ class GraphDataset(Dataset):
             for t in json_data["source_tokens"]
         ]
         tokens = [
-                np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
-                for x in tokens
-            ]
-
-        new_tokens = np.zeros(
-            (
-                self._config["data"]["max_sequence_length"],
-                self._config["data"]["max_token_length"]
-            ),
-            dtype=int,
-        )
-        for i in range(min(len(new_tokens), len(tokens))):
-            new_tokens[i] = tokens[i]
-        tokens = torch.tensor(new_tokens)
+            np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
+            for x in tokens
+        ]
+        tokens = torch.tensor(tokens)
 
         edge_index, edge_attr = _parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
@@ -100,11 +90,19 @@ class GraphDataset(Dataset):
         repair_candidates_labels = torch.zeros(
             len(json_data["source_tokens"]), dtype=torch.float32
         ).scatter_(0, torch.tensor(repair_candidates), 1.0)
-        labels = torch.transpose(torch.stack(
-            [error_location_labels, repair_targets_labels, repair_candidates_labels], 0
-        ), 0, 1)
+        labels = torch.transpose(
+            torch.stack(
+                [
+                    error_location_labels,
+                    repair_targets_labels,
+                    repair_candidates_labels,
+                ],
+                0,
+            ),
+            0,
+            1,
+        )
         return_data = Data(tokens, edge_index=edge_index, y=labels)
-        print(return_data)
         return return_data
 
     def process_line(self, line: str) -> Data:
