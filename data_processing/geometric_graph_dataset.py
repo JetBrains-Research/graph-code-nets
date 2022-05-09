@@ -46,10 +46,10 @@ class GraphDataset(Dataset):
         self._pref_sum_lines = get_files_count_lines(self._data_path)
         self._length = self._pref_sum_lines[-1]
 
-    def __len__(self) -> int:
+    def len(self) -> int:
         return self._length
 
-    def __getitem__(self, index: int) -> Data:
+    def get(self, index: int) -> Data:
         file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
         return self.process_line(
@@ -61,7 +61,7 @@ class GraphDataset(Dataset):
     def _parse_line(self, json_data: dict) -> Data:
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
         def _parse_edges(edges: list) -> tuple[torch.tensor, torch.tensor]:
-            _edge_index = [[rel[0], rel[1]] for rel in edges]
+            _edge_index = [[rel[0] for rel in edges], [rel[1] for rel in edges]]
             _edge_attr = [rel[2] for rel in edges]
             return torch.tensor(_edge_index), torch.tensor(_edge_attr)
 
@@ -69,12 +69,21 @@ class GraphDataset(Dataset):
             self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
-        tokens = torch.tensor(
-            [
+        tokens = [
                 np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
                 for x in tokens
             ]
+
+        new_tokens = np.zeros(
+            (
+                self._config["data"]["max_sequence_length"],
+                self._config["data"]["max_token_length"]
+            ),
+            dtype=int,
         )
+        for i in range(min(len(new_tokens), len(tokens))):
+            new_tokens[i] = tokens[i]
+        tokens = torch.tensor(new_tokens)
 
         edge_index, edge_attr = _parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
@@ -91,10 +100,11 @@ class GraphDataset(Dataset):
         repair_candidates_labels = torch.zeros(
             len(json_data["source_tokens"]), dtype=torch.float32
         ).scatter_(0, torch.tensor(repair_candidates), 1.0)
-        labels = torch.stack(
+        labels = torch.transpose(torch.stack(
             [error_location_labels, repair_targets_labels, repair_candidates_labels], 0
-        )
+        ), 0, 1)
         return_data = Data(tokens, edge_index=edge_index, y=labels)
+        print(return_data)
         return return_data
 
     def process_line(self, line: str) -> Data:

@@ -4,7 +4,8 @@ import torch
 import torch.nn.functional as F
 from models import two_pointer_fcn, encoder_gru, encoder_ggnn
 import pytorch_lightning as pl
-from torch_geometric.nn import GatedGraphConv
+from torch_scatter import scatter
+from torch_geometric.data import Data
 from models.util import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
@@ -83,39 +84,10 @@ class VarMisuseLayer(pl.LightningModule):
         return self._shared_eval_step(batch, batch_idx, "test")
 
     def _shared_eval_step(
-        self, batch: torch.Tensor, batch_idx: int, step: str
+        self, batch: Data, batch_idx: int, step: str
     ) -> torch.Tensor:
-        tokens, edges, error_loc, repair_targets, repair_candidates = batch
-        print("tokens", tokens)
-        print("tokens sum", torch.sum(tokens, -1))
-        token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
-        print("token_mask", token_mask)
-        pointer_preds = self(tokens, token_mask, edges)
-        is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
-            pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
-        )
-        losses = self.test_get_losses(
-            is_buggy, loc_predictions, target_probs, error_loc
-        )
-        accuracies = self.test_get_accuracies(
-            is_buggy, loc_predictions, target_probs, error_loc
-        )
-        total_loss: torch.Tensor = sum(losses.values())  # type: ignore[assignment]
-        self.log(
-            step + "_loss",
-            losses,
-            prog_bar=True,
-            on_epoch=True,
-            batch_size=self._data_config["batch_size"],
-        )
-        self.log(
-            step + "_acc",
-            accuracies,
-            prog_bar=True,
-            on_epoch=True,
-            batch_size=self._data_config["batch_size"],
-        )
-        return total_loss
+        x = scatter(batch.x, batch.batch, dim=0, reduce="sum")
+        print(x)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.Adam(
