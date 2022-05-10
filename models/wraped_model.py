@@ -76,7 +76,7 @@ class VarMisuseLayer(pl.LightningModule):
             return predictions
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        return self._shared_eval_step(batch, batch_idx, "train")
+        return self._shared_eval_step(batch, batch_idx, "train_main")
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "val")

@@ -10,7 +10,7 @@ model:
   rnn:
     num_layers: 2
   ggnn:
-    num_layers: 2
+    num_layers: 8
 data:
   batch_size: 2 # In samples
   max_sequence_length: 256
