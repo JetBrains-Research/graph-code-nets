@@ -1,10 +1,7 @@
 import os
 import json
-import torch
-import numpy as np
 from typing import Any
 from torch.utils.data import Dataset
-
 from data_processing.vocabulary import Vocabulary
 from enum import Enum
 from commode_utils.filesystem import get_line_by_offset
@@ -47,10 +44,10 @@ class GraphDataset(Dataset):
         self._pref_sum_lines = get_files_count_lines(self._data_path)
         self._length = self._pref_sum_lines[-1]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._length
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> dict[str, Any]:
         file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
         return self.process_line(
@@ -73,7 +70,6 @@ class GraphDataset(Dataset):
             self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
             for t in json_data["source_tokens"]
         ]
-        tokens_tensor = self._process_tokens(tokens)
         edges = parse_edges(json_data["edges"])
         error_location = json_data["error_location"]
         repair_targets = json_data["repair_targets"]
@@ -82,22 +78,11 @@ class GraphDataset(Dataset):
         ]
         return {
             "edges": edges,
-            "tokens": tokens_tensor,
+            "tokens": tokens,
             "error_location": error_location,
             "repair_targets": repair_targets,
             "repair_candidates": repair_candidates,
         }
-
-    def _process_tokens(self, tokens: list) -> torch.Tensor:
-        tokens = list(
-            map(
-                lambda x: list(
-                    np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
-                ),
-                tokens,
-            )
-        )
-        return torch.Tensor(tokens)
 
     def process_line(self, line: str) -> dict[str, Any]:
         return self._parse_line(json.loads(line))
