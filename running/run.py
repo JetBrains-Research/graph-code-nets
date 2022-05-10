@@ -31,6 +31,7 @@ trainer = pl.Trainer(
     max_epochs=10,
     val_check_interval=0.1,
     logger=wandb_logger,
+    accumulate_grad_batches=4,
 )
 trainer.fit(
     model=model,

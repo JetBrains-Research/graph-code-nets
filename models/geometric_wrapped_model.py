@@ -52,7 +52,7 @@ class VarMisuseLayer(pl.LightningModule):
         return self._prediction(predictions)
 
     def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        return self._shared_eval_step(batch, batch_idx, "train_main")
+        return self._shared_eval_step(batch, batch_idx, "train")
 
     def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "val")
@@ -71,11 +71,11 @@ class VarMisuseLayer(pl.LightningModule):
         repair_targets = torch.nonzero(labels_t[:, :, 1])
         repair_candidates = torch.nonzero(labels_t[:, :, 2])
 
-        print("pointer_preds_t", pointer_preds_t, pointer_preds_t.size())
-        print("token_mask", token_mask, token_mask.size())
-        print("error_loc", error_loc, error_loc.size())
-        print("repair_targets", repair_targets, repair_targets.size())
-        print("repair_candidates", repair_candidates, repair_candidates.size())
+        #print("pointer_preds_t", pointer_preds_t, pointer_preds_t.size())
+        #print("token_mask", token_mask, token_mask.size())
+        #print("error_loc", error_loc, error_loc.size())
+        #print("repair_targets", repair_targets, repair_targets.size())
+        #print("repair_candidates", repair_candidates, repair_candidates.size())
 
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds_t, token_mask, error_loc, repair_targets, repair_candidates
