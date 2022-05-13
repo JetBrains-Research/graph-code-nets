@@ -26,7 +26,10 @@ class VarMisuseLayer(pl.LightningModule):
         )
 
         self._positional_encoding = torch.nn.Parameter(
-            positional_encoding(self._model_config["base"]["hidden_dim"], self._data_config["max_sequence_length"])
+            positional_encoding(
+                self._model_config["base"]["hidden_dim"],
+                self._data_config["max_sequence_length"],
+            )
         )
 
         base_config = self._model_config["base"]
@@ -52,7 +55,9 @@ class VarMisuseLayer(pl.LightningModule):
             torch.clamp(tokens, 0, 1), -1
         )
         states = torch.mean(subtoken_embeddings, 1)
-        positional_encoding_addition = self._positional_encoding[:int(states.size()[0] / batch_size)].repeat(batch_size)
+        # print(states.size())
+        positional_encoding_addition = self._positional_encoding.repeat(batch_size, 1)
+        # print(positional_encoding_addition.size())
         states += positional_encoding_addition
         predictions = self._model(states, edges)
         return self._prediction(predictions)
