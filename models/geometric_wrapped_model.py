@@ -1,5 +1,3 @@
-import numpy as np
-import models.util as util
 import torch
 import torch.nn.functional as F
 from models import two_pointer_fcn, encoder_gru, encoder_ggnn
@@ -9,6 +7,8 @@ from torch_geometric.data import Data
 from models.util import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
+    join_dicts,
+    positional_encoding,
 )
 
 
@@ -25,16 +25,20 @@ class VarMisuseLayer(pl.LightningModule):
             self._vocab_dim, self._model_config["base"]["hidden_dim"]
         )
 
+        self._positional_encoding = torch.nn.Parameter(
+            positional_encoding(self._model_config["base"]["hidden_dim"], self._data_config["max_sequence_length"])
+        )
+
         base_config = self._model_config["base"]
         inner_model = self._model_config["configuration"]
         self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
         if inner_model == "rnn":
             self._model = encoder_gru.EncoderGRU(
-                util.join_dicts(base_config, self._model_config["rnn"])
+                join_dicts(base_config, self._model_config["rnn"])
             )
         elif inner_model == "ggnn":
             self._model = encoder_ggnn.EncoderGGNN(
-                util.join_dicts(base_config, self._model_config["ggnn"])
+                join_dicts(base_config, self._model_config["ggnn"])
             )
         elif inner_model == "ggsnn":
             pass
@@ -42,12 +46,14 @@ class VarMisuseLayer(pl.LightningModule):
             raise ValueError("Unknown model component provided:", inner_model)
 
     def forward(  # type: ignore[override]
-        self, tokens: torch.Tensor, edges: torch.Tensor
+        self, tokens: torch.Tensor, edges: torch.Tensor, batch_size: int
     ) -> torch.Tensor:
         subtoken_embeddings = self._embedding(tokens) * torch.unsqueeze(
             torch.clamp(tokens, 0, 1), -1
         )
-        states = torch.mean(subtoken_embeddings, 2)
+        states = torch.mean(subtoken_embeddings, 1)
+        positional_encoding_addition = self._positional_encoding[:int(states.size()[0] / batch_size)].repeat(batch_size)
+        states += positional_encoding_addition
         predictions = self._model(states, edges)
         return self._prediction(predictions)
 
@@ -61,7 +67,8 @@ class VarMisuseLayer(pl.LightningModule):
         return self._shared_eval_step(batch, batch_idx, "test")
 
     def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
-        pointer_preds = self(batch.x, batch.edge_index)
+        batch_size = batch.batch[-1] + 1
+        pointer_preds = self(batch.x, batch.edge_index, batch_size)
         pointer_preds_t = to_dense_batch(pointer_preds, batch.batch)[0]
         pointer_preds_t = torch.transpose(pointer_preds_t, 1, 2)
         token_mask = torch.clamp(torch.sum(batch.x, -1), 0, 1)
@@ -71,11 +78,11 @@ class VarMisuseLayer(pl.LightningModule):
         repair_targets = torch.nonzero(labels_t[:, :, 1])
         repair_candidates = torch.nonzero(labels_t[:, :, 2])
 
-        #print("pointer_preds_t", pointer_preds_t, pointer_preds_t.size())
-        #print("token_mask", token_mask, token_mask.size())
-        #print("error_loc", error_loc, error_loc.size())
-        #print("repair_targets", repair_targets, repair_targets.size())
-        #print("repair_candidates", repair_candidates, repair_candidates.size())
+        # print("pointer_preds_t", pointer_preds_t, pointer_preds_t.size())
+        # print("token_mask", token_mask, token_mask.size())
+        # print("error_loc", error_loc, error_loc.size())
+        # print("repair_targets", repair_targets, repair_targets.size())
+        # print("repair_candidates", repair_candidates, repair_candidates.size())
 
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds_t, token_mask, error_loc, repair_targets, repair_candidates

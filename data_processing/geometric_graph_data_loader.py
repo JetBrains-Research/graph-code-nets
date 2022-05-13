@@ -3,8 +3,6 @@ import os
 from data_processing.geometric_graph_dataset import GraphDataset
 from data_processing.vocabulary import Vocabulary
 from torch_geometric.loader import DataLoader
-import torch
-import numpy as np
 
 
 class GraphDataModule(pl.LightningDataModule):
@@ -26,13 +24,13 @@ class GraphDataModule(pl.LightningDataModule):
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="train",
+                mode="processed_train",
             )
             self._val = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev",
+                mode="processed_dev",
             )
 
         if stage == "test" or stage is None:
@@ -40,7 +38,7 @@ class GraphDataModule(pl.LightningDataModule):
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="eval",
+                mode="processed_eval",
             )
 
     def train_dataloader(self) -> DataLoader:
