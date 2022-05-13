@@ -63,12 +63,16 @@ class GraphTransformerDecoder(pl.LightningModule):
 
     def forward(  # type: ignore
         self,
-        tgt: Tensor,
-        memory: Tensor,
-        tgt_mask: Optional[Tensor] = None,
-        memory_mask: Optional[Tensor] = None,
-        tgt_key_padding_mask: Optional[Tensor] = None,
-        memory_key_padding_mask: Optional[Tensor] = None,
+        tgt: Tensor,  # shape: [batch size, src_emb_size]
+        memory: Tensor,  # shape: [batch size, source_size, d_model], e.g. source_size is equal to 1 in VarNaming
+        tgt_mask: Optional[Tensor] = None,  # shape: [src_emb_size, src_emb_size]
+        memory_mask: Optional[Tensor] = None,  # shape: [source_size, src_emb_size]
+        tgt_key_padding_mask: Optional[
+            Tensor
+        ] = None,  # shape: [batch size, src_emb_size]
+        memory_key_padding_mask: Optional[
+            Tensor
+        ] = None,  # shape: [batch_size, source_size]
     ) -> Tensor:
         return self.generator(
             self.decoder(

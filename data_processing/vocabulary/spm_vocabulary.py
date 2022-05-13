@@ -1,7 +1,7 @@
 import gzip
 import pathlib
 from itertools import chain
-from typing import Iterable
+from typing import Iterable, Union, List
 
 import ijson
 import sentencepiece as spm
@@ -42,6 +42,8 @@ class SPMVocabularyTrainer:
             vocab_size=self._vocab_size,
             model_type=self._model_type,
             model_prefix=self._model_prefix,
+            add_dummy_prefix=False,  # in GraphVarMiner dataset no whitespaces exist,
+            # and words should be generated in camel case, so dummy whitespace is redundant
         )
 
 
@@ -49,7 +51,7 @@ class SPMVocabulary(Vocabulary):
     def __init__(self, model_file: str):
         self._model_file = model_file
         self._model = spm.SentencePieceProcessor()
-        self._model.Load(model_file=self._model_file)
+        self._model.Init(add_bos=True, add_eos=True, model_file=self._model_file)
 
     def __len__(self) -> int:
         return len(self._model)
@@ -57,8 +59,17 @@ class SPMVocabulary(Vocabulary):
     def encode(self, token: str) -> list[int]:
         return self._model.Encode(token)
 
-    def decode(self, encoded: list[int]) -> str:
+    def decode(self, encoded: Union[int, list[int], list[list[int]]]) -> str:
         return self._model.Decode(encoded)
 
     def pad_id(self) -> int:
         return self._model.pad_id()
+
+    def bos_id(self) -> int:
+        return self._model.bos_id()
+
+    def eos_id(self) -> int:
+        return self._model.eos_id()
+
+    def unk_id(self) -> int:
+        return self._model.unk_id()

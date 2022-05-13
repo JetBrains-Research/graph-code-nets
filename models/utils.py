@@ -1,3 +1,5 @@
+from typing import List, Union
+
 import torch
 
 
@@ -11,9 +13,28 @@ def generate_square_subsequent_mask(sz):
     return mask
 
 
-def generate_padding_mask(src_or_tgt):
+def generate_padding_mask(src_or_tgt, pad_id):
     return (
         torch.zeros_like(src_or_tgt)
-        .masked_fill(src_or_tgt == 0, float("-inf"))
-        .masked_fill(src_or_tgt != 0, float(0.0))
+        .masked_fill(src_or_tgt == pad_id, float("-inf"))
+        .masked_fill(src_or_tgt != pad_id, float(0.0))
     )
+
+
+def remove_special_symbols(out: torch.Tensor, spec_symbols) -> list[list[list[int]]]:
+    """
+    out shape: (batch_size, top_k, L)
+    return: list of batch_size lists, whose length is <= L
+    """
+
+    ret = []
+    spec_symbols_set = set(spec_symbols)
+    for b_i in range(out.size(0)):
+        ret_part = []
+        for k in range(out.size(1)):
+            filtered = list(
+                filter(lambda x: x not in spec_symbols_set, out[b_i][k].tolist())
+            )
+            ret_part.append(filtered)
+        ret.append(ret_part)
+    return ret

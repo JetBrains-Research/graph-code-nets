@@ -28,6 +28,15 @@ class GreatVocabulary(Vocabulary):
     def pad_id(self) -> int:
         return self.lookup(self.pad)
 
+    def bos_id(self) -> int:
+        return -1
+
+    def eos_id(self) -> int:
+        return -1
+
+    def unk_id(self) -> int:
+        return -1
+
     def load_vocab(self):
         with open(self.vocab_path, encoding="utf-8") as f:
             subtokens = [l.rstrip() for l in f]

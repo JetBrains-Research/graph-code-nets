@@ -1,6 +1,7 @@
 from typing import Any
 
 import pytorch_lightning as pl
+import torch_scatter
 from torch.nn import ReLU, Linear
 from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, Sequential
@@ -22,4 +23,11 @@ class GCNEncoder(pl.LightningModule):
         self.model = Sequential("x, edge_index, edge_weight", modules)
 
     def forward(self, batch: Data) -> Tensor:  # type: ignore
-        return self.model(batch.x, batch.edge_index, batch.edge_weight)
+        enc = self.model(batch.x, batch.edge_index, batch.edge_weight)
+        return GCNEncoder._scatter_marked_nodes(enc, batch)
+
+    @staticmethod
+    def _scatter_marked_nodes(enc, batch):
+        return torch_scatter.scatter_mean(
+            enc * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
+        ).unsqueeze(1)

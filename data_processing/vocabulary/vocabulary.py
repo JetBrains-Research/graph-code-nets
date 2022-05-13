@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, Union
 
 
 class Vocabulary(ABC):
@@ -12,9 +12,21 @@ class Vocabulary(ABC):
         ...
 
     @abstractmethod
-    def decode(self, encoded: list[int]) -> str:
+    def decode(self, encoded) -> str:
         ...
 
     @abstractmethod
     def pad_id(self) -> int:
+        ...
+
+    @abstractmethod
+    def bos_id(self) -> int:
+        ...
+
+    @abstractmethod
+    def eos_id(self) -> int:
+        ...
+
+    @abstractmethod
+    def unk_id(self) -> int:
         ...
