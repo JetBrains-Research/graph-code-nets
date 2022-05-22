@@ -115,11 +115,7 @@ class GraphDataset(Dataset):
             self._config["data"]["max_sequence_length"], dtype=torch.float32
         ).scatter_(0, torch.tensor(repair_candidates), 1.0)
         labels = torch.stack(
-            [
-                error_location_labels,
-                repair_targets_labels,
-                repair_candidates_labels,
-            ],
+            [error_location_labels, repair_targets_labels, repair_candidates_labels,],
             1,
         )
         return_data = Data(tokens, edge_index=edge_index, y=labels)

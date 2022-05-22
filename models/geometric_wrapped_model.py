@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from models import two_pointer_fcn, encoder_gru, encoder_ggnn
+from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.data import Data
@@ -43,8 +43,12 @@ class VarMisuseLayer(pl.LightningModule):
             self._model = encoder_ggnn.EncoderGGNN(
                 join_dicts(base_config, self._model_config["ggnn"])
             )
-        elif inner_model == "ggsnn":
-            pass
+        elif inner_model == "gcn":
+            self._model = encoder_gcn.GCNEncoder(
+                -1,
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["gcn"]["num_layers"],
+            )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
@@ -55,9 +59,7 @@ class VarMisuseLayer(pl.LightningModule):
             torch.clamp(tokens, 0, 1), -1
         )
         states = torch.mean(subtoken_embeddings, 1)
-        # print(states.size())
         positional_encoding_addition = self._positional_encoding.repeat(batch_size, 1)
-        # print(positional_encoding_addition.size())
         states += positional_encoding_addition
         predictions = self._model(states, edges)
         return self._prediction(predictions)
@@ -82,12 +84,6 @@ class VarMisuseLayer(pl.LightningModule):
         error_loc = torch.nonzero(labels_t[:, :, 0])[:, 1]
         repair_targets = torch.nonzero(labels_t[:, :, 1])
         repair_candidates = torch.nonzero(labels_t[:, :, 2])
-
-        # print("pointer_preds_t", pointer_preds_t, pointer_preds_t.size())
-        # print("token_mask", token_mask, token_mask.size())
-        # print("error_loc", error_loc, error_loc.size())
-        # print("repair_targets", repair_targets, repair_targets.size())
-        # print("repair_candidates", repair_candidates, repair_candidates.size())
 
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds_t, token_mask, error_loc, repair_targets, repair_candidates

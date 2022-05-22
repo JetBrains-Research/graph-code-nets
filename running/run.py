@@ -29,7 +29,7 @@ trainer = pl.Trainer(
     accelerator="gpu",
     devices=1,
     max_epochs=3,
-    val_check_interval=0.1,
+    val_check_interval=0.3,
     logger=wandb_logger,
     accumulate_grad_batches=4,
 )

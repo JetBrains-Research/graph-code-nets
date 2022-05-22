@@ -2,7 +2,7 @@ import numpy as np
 import models.util as util
 import torch
 import torch.nn.functional as F
-from models import two_pointer_fcn, encoder_gru, encoder_ggnn
+from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn
 import pytorch_lightning as pl
 from models.util import (
     sparse_categorical_accuracy,
@@ -11,7 +11,7 @@ from models.util import (
 
 
 class VarMisuseLayer(pl.LightningModule):
-    def __init__(self, config: dict, vocab_dim: int):
+    def __init__(self, config: dict, vocab_dim: int):  # type: ignore[override]
         super().__init__()
         self._model_config = config["model"]
         self._data_config = config["data"]
@@ -34,8 +34,8 @@ class VarMisuseLayer(pl.LightningModule):
             self._model = encoder_ggnn.EncoderGGNN(
                 util.join_dicts(base_config, self._model_config["ggnn"])
             )
-        elif inner_model == "ggsnn":
-            pass
+        elif inner_model == "gcn":
+            self._model = encoder_gcn.EncoderGCN(base_config)
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
