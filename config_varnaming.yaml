@@ -19,7 +19,7 @@ vocabulary:
 
 data:
   root: 'datasets/java_small/'
-  link: 'https://drive.google.com/file/d/1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
+  link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
 
 train:
   max_steps: 100
