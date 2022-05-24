@@ -52,7 +52,11 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         self._mode = mode
         self._vocabulary = vocabulary
 
-        self._root = self._config[self._mode]["dataset"]["root"]
+        if "root" in self._config[self._mode]["dataset"]:
+            self._root = self._config[self._mode]["dataset"]["root"]
+        else:
+            self._root = self._config["data"]["root"]
+
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
 
@@ -69,7 +73,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
     def download(self):
-        download_from_google_drive(self._root, self._config["data"]["java_small"])
+        download_from_google_drive(self._root, self._config["data"]["link"])
 
     def raw_paths(self) -> List[str]:
         return self._root
