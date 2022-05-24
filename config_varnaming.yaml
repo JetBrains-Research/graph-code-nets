@@ -18,7 +18,7 @@ vocabulary:
   max_token_length: 20  # In terms of (BPE) sub-tokens.
 
 data:
-  root: datasets/java_small/
+  root: 'datasets/java_small/'
   link: 'https://drive.google.com/file/d/1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
 
 train:

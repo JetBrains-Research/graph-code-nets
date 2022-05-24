@@ -39,14 +39,14 @@ _graph_var_miner_edge_types_to_idx = dict(
 
 class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def __init__(
-            self,
-            config: dict,
-            mode: str,
-            vocabulary: Vocabulary,
-            *,
-            transform=None,
-            pre_transform=None,
-            pre_filter=None,
+        self,
+        config: dict,
+        mode: str,
+        vocabulary: Vocabulary,
+        *,
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
     ):
         self._config = config
         self._mode = mode
