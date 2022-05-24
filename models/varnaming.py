@@ -223,12 +223,8 @@ class VarNamingModel(pl.LightningModule):
         loss = self.loss_fn(
             predicted.reshape(-1, predicted.shape[-1]), batch.name.long().reshape(-1)
         )
-        return loss
-
-    def training_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        loss = self._shared_step(batch, batch_idx, "train")
         self.log(
-            "training_loss",
+            f"{step}_loss",
             loss,
             prog_bar=True,
             on_epoch=True,
@@ -236,11 +232,14 @@ class VarNamingModel(pl.LightningModule):
         )
         return loss
 
+    def training_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
+        return self._shared_step(batch, batch_idx, "train")
+
     def validation_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        pass
+        return self._shared_step(batch, batch_idx, "validation")
 
     def test_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        pass
+        return self._shared_step(batch, batch_idx, "test")
 
     def configure_optimizers(self):
         # TODO add optimizer config

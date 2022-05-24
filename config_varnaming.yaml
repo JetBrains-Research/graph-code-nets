@@ -14,16 +14,18 @@ model:
 
 vocabulary:
   type: 'spm'
-  path: "spm.model"
+  path: ~  # e.g. my_vocab.model
   max_token_length: 20  # In terms of (BPE) sub-tokens.
+
+data:
+  java_small: 'https://drive.google.com/file/d/1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
 
 train:
   max_steps: 100
   learning_rate: 0.0001
 
   dataset:
-    root: ~
-    process: False
+    root: datasets/java_small/
     debug: False
 
   dataloader:
@@ -32,8 +34,7 @@ train:
 
 validation:
   dataset:
-    root: ~
-    process: False
+    root: datasets/java_small/
     debug: False
 
   dataloader:
@@ -42,8 +43,7 @@ validation:
 
 test:
   dataset:
-    root: ~
-    process: False
+    root: datasets/java_small/
     debug: False
 
   dataloader:

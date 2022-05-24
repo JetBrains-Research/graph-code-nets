@@ -20,7 +20,7 @@ class SPMVocabularyTrainer:
 
         _raw_data_path = pathlib.Path(self._root)
         if not _raw_data_path.exists():
-            raise FileNotFoundError()
+            raise FileNotFoundError(self._root)
 
         self._data_files: list[pathlib.Path] = [
             f for f in _raw_data_path.iterdir() if f.is_file()

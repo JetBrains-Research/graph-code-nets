@@ -26,17 +26,10 @@ class GraphVarMinerModule(pl.LightningDataModule):
         pass
 
     def _setup_dataset(self, mode: str):
-        process = self._config[mode]["dataset"]["process"]
-
-        if process:
-            cls = GraphVarMinerDataset
-        else:
-            cls = GraphVarMinerDatasetIterable
-
         setattr(
             self,
             f"_{mode}",
-            cls(config=self._config, mode=mode, vocabulary=self._vocabulary),
+            GraphVarMinerDatasetIterable(config=self._config, mode=mode, vocabulary=self._vocabulary),
         )
 
     def setup(self, stage: str = None):
