@@ -27,7 +27,9 @@ class GraphVarMinerModule(pl.LightningDataModule):
         setattr(
             self,
             f"_{mode}",
-            GraphVarMinerDatasetIterable(config=self._config, mode=mode, vocabulary=self._vocabulary),
+            GraphVarMinerDatasetIterable(
+                config=self._config, mode=mode, vocabulary=self._vocabulary
+            ),
         )
 
     def setup(self, stage: str = None):

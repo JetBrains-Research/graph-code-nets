@@ -13,8 +13,10 @@ def main():
         config = yaml.safe_load(f)
 
     if "path" not in config["vocabulary"]:
-        raise ValueError("You need to specify path to vocabulary. "
-                         "Possibly, you should launch create_spm_vocabulary.py on your data")
+        raise ValueError(
+            "You need to specify path to vocabulary. "
+            "Possibly, you should launch create_spm_vocabulary.py on your data"
+        )
 
     if config["vocabulary"]["type"] == "spm":
         vocabulary = SPMVocabulary(config["vocabulary"]["path"])
