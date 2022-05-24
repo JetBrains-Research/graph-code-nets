@@ -1,8 +1,6 @@
 import yaml
-from data_processing import graph_dataset, graph_data_loader
+from data_processing import graph_data_loader, graph_dataset
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
-from data_processing.vocabulary.vocabulary import Vocabulary
-
 
 data_path = "data"
 config_path = "config.yml"

@@ -1,24 +1,18 @@
 import heapq
 import itertools
 from dataclasses import dataclass, field
-from queue import PriorityQueue
 
 import pytorch_lightning as pl
 import torch
-import torch_scatter
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from torch import Tensor
 from torch_geometric.data import Batch
-from torch_geometric.nn import Sequential
-from torchvision.transforms import Lambda
 import torch.nn.functional as F
 
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
 from models.utils import generate_square_subsequent_mask, generate_padding_mask
-
-from numpy import inf
 
 
 class VarNamingModel(pl.LightningModule):

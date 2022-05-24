@@ -1,4 +1,3 @@
-import sys
 import argparse
 
 from data_processing.vocabulary.spm_vocabulary import SPMVocabularyTrainer

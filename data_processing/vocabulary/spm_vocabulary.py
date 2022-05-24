@@ -1,7 +1,7 @@
 import gzip
 import pathlib
 from itertools import chain
-from typing import Iterable, Union, List
+from typing import Iterable, Union
 
 import ijson
 import sentencepiece as spm

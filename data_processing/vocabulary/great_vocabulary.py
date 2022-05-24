@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import Iterable
 
 from data_processing.vocabulary.vocabulary import Vocabulary
 

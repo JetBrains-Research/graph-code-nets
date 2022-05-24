@@ -4,8 +4,6 @@ import pytorch_lightning as pl
 from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 
-from data_processing.graph_var_miner_dataset import GraphVarMinerDataset
-
 # DataLoader expects output to be tensor, but yet they are GraphDatasetItemBase, so we need collate_fn
 from data_processing.graph_var_miner_dataset_iterable import (
     GraphVarMinerDatasetIterable,
