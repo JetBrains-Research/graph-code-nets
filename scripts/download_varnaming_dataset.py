@@ -23,10 +23,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--root',
                         help="Path to directory where to dataset will be downloaded and unpacked",
-                        required='--use-config' in sys.argv)
+                        required='--use-config' not in sys.argv)
     parser.add_argument('--link',
                         help="Link to google drive file with dataset",
-                        required='--use-config' in sys.argv)
+                        required='--use-config' not in sys.argv)
     parser.add_argument('--use-config',
                         type=str,
                         help='Use setting from provided yaml config. '
@@ -44,4 +44,4 @@ if __name__ == "__main__":
     if hasattr(args, 'link'):
         link = args.link
 
-    download_from_google_drive(**vars(args))
+    download_from_google_drive(root, link)
