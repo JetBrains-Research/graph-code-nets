@@ -28,9 +28,8 @@ if __name__ == "__main__":
                         help="Link to google drive file with dataset",
                         required='--use-config' not in sys.argv)
     parser.add_argument('--use-config',
-                        type=str,
-                        help='Use setting from provided yaml config. '
-                             'More precisely, takes data.root and data.link from config. '
+                        action='store_true',
+                        help='Use setting from config_varnaming.yaml. '
                              'However, they will be overwritten by root or link options above')
 
     args = parser.parse_args()
