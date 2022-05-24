@@ -15,6 +15,7 @@ import gdown
 import zipfile
 
 from data_processing.vocabulary.vocabulary import Vocabulary
+from scripts.download_varnaming_dataset import download_from_google_drive
 
 _graph_var_miner_edge_types = [
     "NextToken",
@@ -38,14 +39,14 @@ _graph_var_miner_edge_types_to_idx = dict(
 
 class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def __init__(
-        self,
-        config: dict,
-        mode: str,
-        vocabulary: Vocabulary,
-        *,
-        transform=None,
-        pre_transform=None,
-        pre_filter=None,
+            self,
+            config: dict,
+            mode: str,
+            vocabulary: Vocabulary,
+            *,
+            transform=None,
+            pre_transform=None,
+            pre_filter=None,
     ):
         self._config = config
         self._mode = mode
@@ -68,17 +69,10 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
     def download(self):
-        os.makedirs(self._root)
-        java_small_zip = gdown.download(
-            self._config["data"]["java_small"], self._root, resume=True, fuzzy=True
-        )
-        with zipfile.ZipFile(java_small_zip, "r") as zip_ref:
-            zip_ref.extractall(self._root)
-        os.remove(java_small_zip)
+        download_from_google_drive(self._root, self._config["data"]["java_small"])
 
-    @property
-    def processed_file_names(self) -> Union[str, List[str], Tuple]:
-        return os.path.join(self._root, self._config["vocabulary"]["path"])
+    def raw_paths(self) -> List[str]:
+        return self._root
 
     def _item_from_dict(self, dct) -> Data:
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
