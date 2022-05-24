@@ -21,10 +21,10 @@ def download_from_google_drive(root, link):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('root',
+    parser.add_argument('--root',
                         help="Path to directory where to dataset will be downloaded and unpacked",
                         required='--use-config' in sys.argv)
-    parser.add_argument('link',
+    parser.add_argument('--link',
                         help="Link to google drive file with dataset",
                         required='--use-config' in sys.argv)
     parser.add_argument('--use-config',
