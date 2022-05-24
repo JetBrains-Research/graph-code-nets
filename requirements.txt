@@ -6,3 +6,4 @@ mypy~=0.942
 types-PyYAML~=6.0.5
 ijson~=3.1.3
 gdown~=4.4.0
+sentencepiece~=0.1.96
