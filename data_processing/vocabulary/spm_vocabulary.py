@@ -12,7 +12,13 @@ from data_processing.vocabulary.vocabulary import Vocabulary
 
 class SPMVocabularyTrainer:
     def __init__(
-            self, root: str, vocab_size: int, model_type: str, model_prefix: str = "spm", fraction_prob=0.1, seed=1337
+            self, root: str,
+            vocab_size: int,
+            model_type: str,
+            model_prefix: str = "spm",
+            fraction_prob=0.1,
+            seed=1337,
+            num_threads=4
     ):
         self._root = root
         self._vocab_size = vocab_size
@@ -20,6 +26,7 @@ class SPMVocabularyTrainer:
         self._model_prefix = model_prefix
         self._fraction_prob = fraction_prob  # random sample only fraction_prob of all words
         self._seed = seed
+        self._num_threads = 4
 
         _raw_data_path = pathlib.Path(self._root)
         if not _raw_data_path.exists():
@@ -54,6 +61,7 @@ class SPMVocabularyTrainer:
             model_prefix=self._model_prefix,
             add_dummy_prefix=False,  # in GraphVarMiner dataset no whitespaces exist,
             # and words should be generated in camel case, so dummy whitespace is redundant
+            num_threads=self._num_threads
         )
 
 
