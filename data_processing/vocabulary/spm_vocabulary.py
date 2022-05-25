@@ -39,13 +39,13 @@ class SPMVocabularyTrainer:
     def _words_from_file(self, filename) -> Iterable[str]:
         f = gzip.open(str(filename), "rb")
         items = ijson.items(f, "item.ContextGraph.NodeLabels")
-        return chain.from_iterable(
-            map(lambda p:
-                iter(p.values()),
-                map(lambda d:
-                    random.choices(d, k=round(len(d) * self._fraction_prob)),
+        return filter(
+            lambda _: random.random() < self._fraction_prob,
+            chain.from_iterable(
+                map(lambda p:
+                    iter(p.values()),
                     items)
-                )
+            )
         )
 
     def _word_iterator(self):
