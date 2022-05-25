@@ -27,12 +27,14 @@ def main():
     parser.add_argument(
         "fraction_prob",
         default=0.1,
+        type=float,
         help="Random sample only fraction_prob of all words. Used for extremely large corpus"
     )
 
     parser.add_argument(
         "seed",
         default=1337,
+        type=int,
         help="Random seed for fraction_prob"
     )
 
