@@ -24,6 +24,18 @@ def main():
         " path/to/vocab/my_model.vocab will be generated",
     )
 
+    parser.add_argument(
+        "fraction_prob",
+        default=0.1,
+        help="Random sample only fraction_prob of all words. Used for extremely large corpus"
+    )
+
+    parser.add_argument(
+        "seed",
+        default=1337,
+        help="Random seed for fraction_prob"
+    )
+
     args = parser.parse_args()
 
     spm_trainer = SPMVocabularyTrainer(**vars(args))
