@@ -7,6 +7,7 @@
 
 conda update -y -n base -c defaults conda
 conda create -n nir-graph
+source ~/anaconda3/etc/profile.d/conda.sh
 conda activate nir-graph
 
 conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
