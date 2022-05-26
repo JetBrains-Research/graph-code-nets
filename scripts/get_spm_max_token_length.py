@@ -47,7 +47,7 @@ def main():
 
     it = word_iterator(data_files)
 
-    enc_lens = defaultdict()
+    enc_lens = defaultdict(int)
     mx = 0
     for word in it:
         enc = vocab.encode(word)
