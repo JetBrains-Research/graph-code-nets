@@ -2,8 +2,8 @@ import gzip
 import pathlib
 import random
 import sys
-from typing import Iterable
 from itertools import chain
+from typing import Iterable
 
 import ijson
 
@@ -11,12 +11,15 @@ from data_processing.vocabulary.spm_vocabulary import (
     SPMVocabulary,
 )
 
+fraction_prob = 0.1
+seed = 1337
 
-def words_from_file(self, filename) -> Iterable[str]:
+
+def words_from_file(filename) -> Iterable[str]:
     f = gzip.open(str(filename), "rb")
     items = ijson.items(f, "item.ContextGraph.NodeLabels")
     return filter(
-        lambda _: random.random() < self._fraction_prob,
+        lambda _: random.random() < fraction_prob,
         chain.from_iterable(
             map(lambda p:
                 iter(p.values()),
@@ -32,7 +35,6 @@ def word_iterator(data_files):
 def main():
     root = sys.argv[1]
     model = sys.argv[2]
-    seed = 1337
 
     vocab = SPMVocabulary(model_file=model)
 
