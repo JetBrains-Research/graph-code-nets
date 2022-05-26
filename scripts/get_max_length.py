@@ -14,13 +14,18 @@ from data_processing.vocabulary.spm_vocabulary import (
 from datetime import datetime
 
 
+counter = 0
+
 def words_from_file(filename) -> Iterable[str]:
+    global counter
+    print(counter, filename)
+    counter += 1
     f = gzip.open(str(filename), "rb")
     items = ijson.items(f, "item.ContextGraph.NodeLabels")
     return chain.from_iterable(map(lambda p: iter(p.values()), items))
 
-
 def word_iterator(data_files):
+
     return chain.from_iterable(map(words_from_file, data_files))
 
 
