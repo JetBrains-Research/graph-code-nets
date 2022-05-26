@@ -65,7 +65,7 @@ def main():
     dists = np.array(enc_lens_l, dtype=float)
     dists /= np.sum(dists)
     dists = np.cumsum(dists)
-    percs = [0.95, 0.99, 0.999, 0.9999, 1.]
+    percs = [0.95, 0.99, 0.999, 0.9999, 1.0]
     percs_r = np.zeros_like(percs, dtype=bool)
     percs_v = np.zeros_like(percs, dtype=int)
     for n, p in enumerate(dists):
@@ -75,8 +75,10 @@ def main():
                 percs_v[i] = n
     percs_v[-1] = mx
 
-    print(f'Percentiles: {list(percs)}')
-    print(f'Max token length: {list(percs_v)}')
+    print(f"Dataset {root}")
+    print(f"Model {model}")
+    print(f"Percentiles: {list(percs)}")
+    print(f"Max token length: {list(percs_v)}")
 
 
 if __name__ == "__main__":
