@@ -6,6 +6,8 @@ from datetime import datetime
 from itertools import chain
 from typing import Iterable
 
+from collections import defaultdict
+
 import ijson
 import numpy as np
 
@@ -45,7 +47,7 @@ def main():
 
     it = word_iterator(data_files)
 
-    enc_lens = {}
+    enc_lens = defaultdict()
     mx = 0
     for word in it:
         enc = vocab.encode(word)
