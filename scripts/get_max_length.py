@@ -1,7 +1,7 @@
 import gzip
 import pathlib
-import random
 import sys
+import time
 from itertools import chain
 from typing import Iterable
 
@@ -11,21 +11,13 @@ from data_processing.vocabulary.spm_vocabulary import (
     SPMVocabulary,
 )
 
-fraction_prob = 0.1
-seed = 1337
+from datetime import datetime
 
 
 def words_from_file(filename) -> Iterable[str]:
     f = gzip.open(str(filename), "rb")
     items = ijson.items(f, "item.ContextGraph.NodeLabels")
-    return filter(
-        lambda _: random.random() < fraction_prob,
-        chain.from_iterable(
-            map(lambda p:
-                iter(p.values()),
-                items)
-        )
-    )
+    return chain.from_iterable(map(lambda p: iter(p.values()), items))
 
 
 def word_iterator(data_files):
@@ -45,7 +37,6 @@ def main():
     data_files: list[pathlib.Path] = [
         f for f in _raw_data_path.iterdir() if f.is_file()
     ]
-    random.seed(seed)
 
     it = word_iterator(data_files)
 
@@ -54,9 +45,9 @@ def main():
         enc = vocab.encode(word)
         if len(enc) > mx:
             mx = len(enc)
-            print(f'New maximum {mx} on {word}')
+            print(f"{datetime.fromtimestamp(time.time())}: New maximum {mx} on {word}")
 
-    print('Maximum length is ', mx)
+    print("Maximum length is ", mx)
 
 
 if __name__ == "__main__":
