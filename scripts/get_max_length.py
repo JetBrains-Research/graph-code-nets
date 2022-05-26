@@ -1,15 +1,13 @@
 import gzip
-import os
 import pathlib
-import sys
-from collections import Iterable
-from itertools import chain
 import random
+import sys
+from typing import Iterable
+from itertools import chain
 
 import ijson
 
 from data_processing.vocabulary.spm_vocabulary import (
-    SPMVocabularyTrainer,
     SPMVocabulary,
 )
 
