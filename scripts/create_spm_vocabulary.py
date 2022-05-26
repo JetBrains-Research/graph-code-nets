@@ -20,29 +20,22 @@ def main():
     parser.add_argument(
         "model_prefix",
         help="Output model name prefix. "
-             "For example, for path/to/vocab/my_model, path/to/vocab/my_model.model and"
-             " path/to/vocab/my_model.vocab will be generated",
+        "For example, for path/to/vocab/my_model, path/to/vocab/my_model.model and"
+        " path/to/vocab/my_model.vocab will be generated",
     )
 
     parser.add_argument(
         "fraction_prob",
         default=0.1,
         type=float,
-        help="Random sample only fraction_prob of all words. Used for extremely large corpus"
+        help="Random sample only fraction_prob of all words. Used for extremely large corpus",
     )
 
     parser.add_argument(
-        "seed",
-        default=1337,
-        type=int,
-        help="Random seed for fraction_prob"
+        "seed", default=1337, type=int, help="Random seed for fraction_prob"
     )
 
-    parser.add_argument(
-        "num_threads",
-        default=4,
-        help="Num of used threads"
-    )
+    parser.add_argument("num_threads", default=4, help="Num of used threads")
 
     args = parser.parse_args()
 
