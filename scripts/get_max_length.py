@@ -45,14 +45,17 @@ def main():
 
     it = word_iterator(data_files)
 
+    enc_lens = [0]*100
     mx = 0
     for word in it:
         enc = vocab.encode(word)
+        enc_lens[len(enc)] += 1
         if len(enc) > mx:
             mx = len(enc)
             print(f"{datetime.fromtimestamp(time.time())}: New maximum {mx} on {word}")
 
     print("Maximum length is ", mx)
+    print("Distribution is ", enc_lens)
 
 
 if __name__ == "__main__":
