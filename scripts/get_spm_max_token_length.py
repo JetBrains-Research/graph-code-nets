@@ -60,9 +60,9 @@ def main():
         enc_lens_l[k] = v
 
     print("Maximum length is ", mx)
-    print("Distribution is ", enc_lens)
+    print("Distribution is ", enc_lens_l)
 
-    dists = np.array(enc_lens, dtype=float)
+    dists = np.array(enc_lens_l, dtype=float)
     dists /= np.sum(dists)
     dists = np.cumsum(dists)
     percs = [0.95, 0.99, 0.999, 0.9999, 1.]
