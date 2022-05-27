@@ -1,6 +1,11 @@
+import datetime
+import time
+
 import pytorch_lightning as pl
 
 import yaml
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
 
 from data_processing.graph_var_miner_dataloader import GraphVarMinerModule
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
@@ -31,8 +36,19 @@ def main():
     )
     model = VarNamingModel(config, vocabulary)
 
-    trainer = pl.Trainer(**config["trainer"])
+    timestamp = datetime.datetime.fromtimestamp(time.time()).strftime("%y.%m.%d_%h:%m:%s")
+    checkpoint_dirpath = f'{config["checkpoint"]["dir"]}/{timestamp}'
+    checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dirpath,
+                                          save_top_k=int(config["checkpoint"]["top_k"]),
+                                          monitor="validation_loss")
+    logger = WandbLogger(**config["logger"])
+
+    trainer = pl.Trainer(**config["trainer"], callbacks=[checkpoint_callback], logger=logger)
     trainer.fit(model, datamodule=datamodule)
+
+
+    print('Best model: ', checkpoint_callback.best_model_path)
+    print(f'Top {checkpoint_callback.save_top_k}: {checkpoint_callback.best_k_models}')
 
 
 if __name__ == "__main__":

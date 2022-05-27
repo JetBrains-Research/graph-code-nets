@@ -26,6 +26,14 @@ trainer:
   accelerator: gpu
   devices: 1
 
+checkpoint:
+  dir: 'checkpoints'
+  top_k: 3
+
+logger:  # wandb is used
+  project: 'varnaming-training'
+  prefix: 'test'
+
 train:
   learning_rate: 0.0001
 
