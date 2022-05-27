@@ -37,7 +37,7 @@ def main():
     model = VarNamingModel(config, vocabulary)
 
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime(
-        "%y.%m.%d_%h:%m:%s"
+        "%y.%m.%d_%H:%M:%S"
     )
     checkpoint_dirpath = f'{config["checkpoint"]["dir"]}/{timestamp}'
     checkpoint_callback = ModelCheckpoint(
