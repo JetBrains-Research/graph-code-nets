@@ -76,7 +76,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         download_from_google_drive(self._root, self._config["data"]["link"])
 
     def raw_paths(self) -> List[str]:
-        return self._root
+        return [self._root]
 
     def _item_from_dict(self, dct) -> Data:
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
