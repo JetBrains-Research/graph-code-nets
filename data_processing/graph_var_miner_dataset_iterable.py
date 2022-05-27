@@ -75,6 +75,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def download(self):
         download_from_google_drive(self._root, self._config["data"]["link"])
 
+    @property
     def raw_paths(self) -> List[str]:
         return [self._root]
 
