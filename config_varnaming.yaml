@@ -14,8 +14,8 @@ model:
 
 vocabulary:
   type: 'spm'
-  path: ~  # e.g. my_vocab.model
-  max_token_length: 20  # In terms of (BPE) sub-tokens.
+  path: 'pretrained/vocab_bpe_10p.model'   # e.g. my_vocab.model
+  max_token_length: 16  # In terms of (BPE) sub-tokens. 0.999 percentile word coverage
 
 data:
   root: 'datasets/java_small/'
