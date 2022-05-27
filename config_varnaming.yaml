@@ -22,9 +22,11 @@ data:
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
 
 trainer:
-  max_steps: 100
+  max_epochs: 10
   accelerator: gpu
   devices: 1
+  check_val_every_n_epoch: 5
+  precision: 16
 
 checkpoint:
   dir: 'checkpoints'
