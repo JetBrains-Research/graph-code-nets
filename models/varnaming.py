@@ -50,7 +50,9 @@ class VarNamingModel(pl.LightningModule):
         if self.config["model"]["decoder"] == "transformer_decoder":
             target_batch = batch.name
 
-            target_mask = generate_square_subsequent_mask(self.max_token_length, device=self.device)
+            target_mask = generate_square_subsequent_mask(
+                self.max_token_length, device=self.device
+            )
 
             # TODO: investigate if this mask has any effect
             target_padding_mask = generate_padding_mask(
@@ -87,7 +89,9 @@ class VarNamingModel(pl.LightningModule):
                     for i in range(
                         self.max_token_length - 2
                     ):  # bos + variable name + eos
-                        target_mask = generate_square_subsequent_mask(current.size(1), device=self.device)
+                        target_mask = generate_square_subsequent_mask(
+                            current.size(1), device=self.device
+                        )
 
                         predicted = self.decoder(
                             current, varname_batch_part, tgt_mask=target_mask
