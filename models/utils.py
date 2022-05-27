@@ -3,8 +3,8 @@ from typing import List, Union
 import torch
 
 
-def generate_square_subsequent_mask(sz):
-    mask = (torch.triu(torch.ones((sz, sz))) == 1).transpose(0, 1)
+def generate_square_subsequent_mask(sz, device):
+    mask = (torch.triu(torch.ones((sz, sz), device=device)) == 1).transpose(0, 1)
     mask = (
         mask.float()
         .masked_fill(mask == 0, float("-inf"))
@@ -13,9 +13,9 @@ def generate_square_subsequent_mask(sz):
     return mask
 
 
-def generate_padding_mask(src_or_tgt, pad_id):
+def generate_padding_mask(src_or_tgt, pad_id, device):
     return (
-        torch.zeros_like(src_or_tgt)
+        torch.zeros_like(src_or_tgt, device=device)
         .masked_fill(src_or_tgt == pad_id, float("-inf"))
         .masked_fill(src_or_tgt != pad_id, float(0.0))
     )
