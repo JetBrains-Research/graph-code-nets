@@ -21,11 +21,12 @@ data:
   root: 'datasets/java_small/'
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
 
+trainer:
+  max_steps: 100
+  accelerator: gpu
+  devices: 1
+
 train:
-  trainer:
-    max_steps: 100
-    accelerator: auto
-    devices: -1
   learning_rate: 0.0001
 
   dataset:
@@ -33,7 +34,7 @@ train:
 
   dataloader:
     batch_size: 64
-    num_workers: 8
+    num_workers: 4
 
 validation:
   dataset:
@@ -41,7 +42,7 @@ validation:
 
   dataloader:
     batch_size: 64
-    num_workers: 8
+    num_workers: 4
 
 test:
   dataset:
@@ -49,4 +50,4 @@ test:
 
   dataloader:
     batch_size: 64
-    num_workers: 8
+    num_workers: 4
