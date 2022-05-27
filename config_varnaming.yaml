@@ -22,7 +22,10 @@ data:
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
 
 train:
-  max_steps: 100
+  trainer:
+    max_steps: 100
+    accelerator: auto
+    devices: -1
   learning_rate: 0.0001
 
   dataset:

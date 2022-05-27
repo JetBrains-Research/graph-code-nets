@@ -31,7 +31,7 @@ def main():
     )
     model = VarNamingModel(config, vocabulary)
 
-    trainer = pl.Trainer(max_steps=config["train"]["max_steps"])
+    trainer = pl.Trainer(**vars(config["train"]["trainer"]))
     trainer.fit(model, datamodule=datamodule)
 
 
