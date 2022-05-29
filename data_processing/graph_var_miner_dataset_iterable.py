@@ -44,7 +44,6 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         mode: str,
         vocabulary: Vocabulary,
         *,
-        cache_in_ram: bool = False,
         transform=None,
         pre_transform=None,
         pre_filter=None,
@@ -52,12 +51,18 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
-        self._cache_in_ram = cache_in_ram
 
         if "root" in self._config[self._mode]["dataset"]:
             self._root = self._config[self._mode]["dataset"]["root"]
         else:
             self._root = self._config["data"]["root"]
+
+        if "cache_in_ram" in self._config[self._mode]["dataset"]:
+            self._cache_in_ram = self._config[self._mode]["dataset"]["cache_in_ram"]
+        elif "cache_in_ram" in self._config["data"]:
+            self._cache_in_ram = self._config["data"]["cache_in_ram"]
+        else:
+            self._cache_in_ram = False
 
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
