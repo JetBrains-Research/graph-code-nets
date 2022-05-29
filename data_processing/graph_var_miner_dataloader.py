@@ -1,6 +1,8 @@
+from multiprocessing import Manager
 from typing import Any, Optional
 
 import pytorch_lightning as pl
+import torch
 from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 
@@ -16,6 +18,9 @@ class GraphVarMinerModule(pl.LightningDataModule):
         super().__init__()
         self._config = config
         self._vocabulary = vocabulary
+        torch.multiprocessing.set_sharing_strategy('file_system')
+        self._manager = Manager()
+        self._cache_dict = self._manager.dict()
         self._train: Optional[Dataset[Any]] = None
         self._validation: Optional[Dataset[Any]] = None
         self._test: Optional[Dataset[Any]] = None
@@ -28,7 +33,7 @@ class GraphVarMinerModule(pl.LightningDataModule):
             self,
             f"_{mode}",
             GraphVarMinerDatasetIterable(
-                config=self._config, mode=mode, vocabulary=self._vocabulary
+                config=self._config, mode=mode, vocabulary=self._vocabulary, cache_dict=self._cache_dict
             ),
         )
 

@@ -44,6 +44,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         mode: str,
         vocabulary: Vocabulary,
         *,
+        cache_dict=None,
         transform=None,
         pre_transform=None,
         pre_filter=None,
@@ -65,6 +66,9 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         else:
             self._cache_in_ram = False
 
+        if self._cache_in_ram:
+            torch.multiprocessing.set_sharing_strategy('file_system')
+
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
 
@@ -78,7 +82,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
         self.__data_sample: Optional[Data] = None
 
-        self._cached_in_ram = {}  # cache list of data samples, accessed by filename
+        self._cached_in_ram = cache_dict  # cache list of data samples, accessed by filename
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
