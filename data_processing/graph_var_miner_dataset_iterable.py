@@ -48,6 +48,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         pre_transform=None,
         pre_filter=None,
     ):
+        print('New iterable dataset created!')
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
@@ -164,6 +165,10 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         items_iter = map(self._item_from_dict, items)
         if self._cache_in_ram:
             self._cached_in_ram[filename] = list(items_iter)
+
+            worker_num = torch.utils.data.get_worker_info().id
+            print(f'Worker #{worker_num}, cached {filename}')
+
             return iter(self._cached_in_ram[filename])
         else:
             return items_iter
@@ -176,6 +181,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
     def __iter__(self) -> Iterator[Data]:
         worker_info = torch.utils.data.get_worker_info()
+        print(f'New iterable created by worker {worker_info.id}')
         if worker_info is None:
             files_slice = self._data_files
         else:
