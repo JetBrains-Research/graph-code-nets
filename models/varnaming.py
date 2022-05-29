@@ -6,13 +6,14 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from torch import Tensor
+from torch.nn import Transformer
 from torch_geometric.data import Batch
 import torch.nn.functional as F
 
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
-from models.utils import generate_square_subsequent_mask, generate_padding_mask
+from models.utils import generate_padding_mask
 
 
 class VarNamingModel(pl.LightningModule):
@@ -50,9 +51,9 @@ class VarNamingModel(pl.LightningModule):
         if self.config["model"]["decoder"] == "transformer_decoder":
             target_batch = batch.name
 
-            target_mask = generate_square_subsequent_mask(
-                self.max_token_length, device=self.device
-            )
+            target_mask = Transformer.generate_square_subsequent_mask(
+                self.max_token_length
+            ).to(self.device)
 
             # TODO: investigate if this mask has any effect
             target_padding_mask = generate_padding_mask(
@@ -60,11 +61,11 @@ class VarNamingModel(pl.LightningModule):
             )
 
             predicted = self.decoder(
-                target_batch,  # shape: [batch size, src_emb_size]
+                target_batch,  # shape: [batch size, src_seq_length]
                 varname_batch,  # shape: [batch size, 1, d_model]
-                tgt_mask=target_mask,  # shape: [src_emb_size, src_emb_size]
-                tgt_key_padding_mask=target_padding_mask,  # shape: [batch size, src_emb_size]
-            )  # shape: [batch size, src_emb_size, target vocabulary dim]
+                tgt_mask=target_mask,  # shape: [src_seq_length, src_seq_length]
+                tgt_key_padding_mask=target_padding_mask,  # shape: [batch size, src_seq_length]
+            )  # shape: [batch size, src_seq_length, target vocabulary dim]
 
             return predicted
         else:
