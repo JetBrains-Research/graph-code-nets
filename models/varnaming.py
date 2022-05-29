@@ -90,9 +90,9 @@ class VarNamingModel(pl.LightningModule):
                     for i in range(
                         self.max_token_length - 2
                     ):  # bos + variable name + eos
-                        target_mask = generate_square_subsequent_mask(
-                            current.size(1), device=self.device
-                        )
+                        target_mask = Transformer.generate_square_subsequent_mask(
+                            current.size(1)
+                        ).to(self.device)
 
                         predicted = self.decoder(
                             current, varname_batch_part, tgt_mask=target_mask
@@ -185,9 +185,9 @@ class VarNamingModel(pl.LightningModule):
                             else:
                                 continue
 
-                        target_mask = generate_square_subsequent_mask(
-                            current_state.size(1), device=self.device
-                        )
+                        target_mask = Transformer.generate_square_subsequent_mask(
+                            current_state.size(1)
+                        ).to(self.device)
 
                         # shape: (1, length, target_vocabulary_size)
                         predicted = self.decoder(
