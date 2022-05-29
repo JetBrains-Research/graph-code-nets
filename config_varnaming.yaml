@@ -34,6 +34,7 @@ checkpoint:
 
 logger:  # wandb is used
   project: 'varnaming-training'
+  entity: 'scaling-graph-nets'
 
 train:
   learning_rate: 0.0001
