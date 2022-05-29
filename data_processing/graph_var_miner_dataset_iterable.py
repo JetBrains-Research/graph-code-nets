@@ -44,6 +44,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         mode: str,
         vocabulary: Vocabulary,
         *,
+        cache_in_ram: bool = False,
         transform=None,
         pre_transform=None,
         pre_filter=None,
@@ -51,6 +52,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
+        self._cache_in_ram = cache_in_ram
 
         if "root" in self._config[self._mode]["dataset"]:
             self._root = self._config[self._mode]["dataset"]["root"]
@@ -69,6 +71,8 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         ]
 
         self.__data_sample: Optional[Data] = None
+
+        self._cached_in_ram = {}  # cache list of data samples, accessed by filename
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
@@ -148,9 +152,16 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         )
 
     def _items_from_file(self, filename):
+        if self._cache_in_ram and filename in self._cached_in_ram:
+            return iter(self._cached_in_ram[filename])
         f = gzip.open(str(filename), "rb")
         items = ijson.items(f, "item")
-        return map(self._item_from_dict, items)
+        items_iter = map(self._item_from_dict, items)
+        if self._cache_in_ram:
+            self._cached_in_ram[filename] = list(items_iter)
+            return iter(self._cached_in_ram[filename])
+        else:
+            return items_iter
 
     def len(self) -> int:
         raise NotImplementedError
