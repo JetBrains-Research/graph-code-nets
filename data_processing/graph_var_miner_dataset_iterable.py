@@ -43,6 +43,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         config: dict,
         mode: str,
         vocabulary: Vocabulary,
+        device='cpu',
         *,
         cache_dict=None,
         transform=None,
@@ -53,6 +54,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
+        self.device = device
 
         if "root" in self._config[self._mode]["dataset"]:
             self._root = self._config[self._mode]["dataset"]["root"]
@@ -96,7 +98,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def _item_from_dict(self, dct) -> Data:
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
         tokens = self._process_tokens(nodes)
-        marked_tokens = torch.tensor(np.array(nodes) == "<var>", dtype=torch.float)
+        marked_tokens = torch.tensor(np.array(nodes) == "<var>", dtype=torch.float, device=self.device)
 
         edge_index = []
         edge_attr = []
@@ -104,8 +106,10 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             edges_type = _graph_var_miner_edge_types_to_idx[edges_typed_group[0]]
             edge_index.extend(edges_typed_group[1])
             edge_attr.extend([edges_type] * len(edges_typed_group[1]))
-        edge_index_t = torch.tensor(edge_index).t().contiguous()
-        edge_weight_t = torch.tensor(edge_attr, dtype=torch.float)
+        edge_index_t = torch.tensor(edge_index, device=self.device).t().contiguous()
+        edge_weight_t = torch.tensor(
+            edge_attr, dtype=torch.float, device=self.device
+        ) # TODO incorrect, fix (must be edge_attr)
 
         filename = dct["filename"]
         name = self._process_tokens([dct["name"]])
@@ -130,7 +134,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
                 ),
             )
         )
-        return torch.Tensor(tokens)
+        return torch.Tensor(tokens, device=self.device)
 
     def _data_sample(self):
         if self.__data_sample is None:
