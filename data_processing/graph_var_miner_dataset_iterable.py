@@ -47,7 +47,6 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         vocabulary: Vocabulary,
         device="cpu",
         *,
-        cache_dict=None,
         transform=None,
         pre_transform=None,
         pre_filter=None,
@@ -86,10 +85,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
         self.__data_sample: Optional[Data] = None
 
-        self._cached_in_ram = cache_dict
-#        (
-#            cache_dict  # cache list of data samples, accessed by filename
-#        )
+        self._cached_in_ram = {}  # cache list of data samples, accessed by filename
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
@@ -181,8 +177,8 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         if self._cache_in_ram:
             self._cached_in_ram[filename] = list(items_iter)
 
-            worker_num = torch.utils.data.get_worker_info().id
-            print(f"Worker #{worker_num}, cached {filename}")
+            # worker_num = torch.utils.data.get_worker_info().id
+            # print(f"Worker #{worker_num}, cached {filename}")
 
             return iter(self._cached_in_ram[filename])
         else:
@@ -196,7 +192,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
     def __iter__(self) -> Iterator[Data]:
         worker_info = torch.utils.data.get_worker_info()
-        print(f"New iterable created by worker {worker_info.id}! Id: {multiprocessing.current_process()}")
+        # print(f"New iterable created by worker {worker_info.id}! Id: {multiprocessing.current_process()}")
         if worker_info is None:
             files_slice = self._data_files
         else:

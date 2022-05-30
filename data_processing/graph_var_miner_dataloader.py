@@ -18,9 +18,6 @@ class GraphVarMinerModule(pl.LightningDataModule):
         super().__init__()
         self._config = config
         self._vocabulary = vocabulary
-#        torch.multiprocessing.set_sharing_strategy("file_descriptor")
-#        self._manager = Manager()
-        self._cache_dict: Dict[str, list] = {}
         self._train: Optional[Dataset[Any]] = None
         self._validation: Optional[Dataset[Any]] = None
         self._test: Optional[Dataset[Any]] = None
@@ -36,7 +33,6 @@ class GraphVarMinerModule(pl.LightningDataModule):
                 config=self._config,
                 mode=mode,
                 vocabulary=self._vocabulary,
-                cache_dict=self._cache_dict,
             ),
         )
 
