@@ -45,15 +45,7 @@ class VarNamingModel(pl.LightningModule):
 
         self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=vocabulary.pad_id())
 
-    def _data_to_device(self, batch: Batch):
-        batch.x = batch.x.to(self.device)
-        batch.edge_index = batch.edge_index.to(self.device)
-        batch.edge_weight = batch.edge_weight.to(self.device)
-        batch.marked_tokens = batch.marked_tokens.to(self.device)
-
     def forward(self, batch: Batch) -> Tensor:  # type: ignore
-        self._data_to_device(batch)
-
         varname_batch: torch.Tensor = self.encoder(batch)
 
         if self.config["model"]["decoder"] == "transformer_decoder":

@@ -43,14 +43,14 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         config: dict,
         mode: str,
         vocabulary: Vocabulary,
-        device='cpu',
+        device="cpu",
         *,
         cache_dict=None,
         transform=None,
         pre_transform=None,
         pre_filter=None,
     ):
-        print('New iterable dataset created!')
+        print("New iterable dataset created!")
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
@@ -69,7 +69,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             self._cache_in_ram = False
 
         if self._cache_in_ram:
-            torch.multiprocessing.set_sharing_strategy('file_system')
+            torch.multiprocessing.set_sharing_strategy("file_system")
 
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
@@ -84,7 +84,9 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
         self.__data_sample: Optional[Data] = None
 
-        self._cached_in_ram = cache_dict  # cache list of data samples, accessed by filename
+        self._cached_in_ram = (
+            cache_dict  # cache list of data samples, accessed by filename
+        )
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
@@ -98,7 +100,9 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def _item_from_dict(self, dct) -> Data:
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
         tokens = self._process_tokens(nodes)
-        marked_tokens = torch.tensor(np.array(nodes) == "<var>", dtype=torch.float, device=self.device)
+        marked_tokens = torch.tensor(
+            np.array(nodes) == "<var>", dtype=torch.float, device=self.device
+        )
 
         edge_index = []
         edge_attr = []
@@ -109,7 +113,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         edge_index_t = torch.tensor(edge_index, device=self.device).t().contiguous()
         edge_weight_t = torch.tensor(
             edge_attr, dtype=torch.float, device=self.device
-        ) # TODO incorrect, fix (must be edge_attr)
+        )  # TODO incorrect, fix (must be edge_attr)
 
         filename = dct["filename"]
         name = self._process_tokens([dct["name"]])
@@ -175,7 +179,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             self._cached_in_ram[filename] = list(items_iter)
 
             worker_num = torch.utils.data.get_worker_info().id
-            print(f'Worker #{worker_num}, cached {filename}')
+            print(f"Worker #{worker_num}, cached {filename}")
 
             return iter(self._cached_in_ram[filename])
         else:
@@ -189,7 +193,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
     def __iter__(self) -> Iterator[Data]:
         worker_info = torch.utils.data.get_worker_info()
-        print(f'New iterable created by worker {worker_info.id}')
+        print(f"New iterable created by worker {worker_info.id}")
         if worker_info is None:
             files_slice = self._data_files
         else:
