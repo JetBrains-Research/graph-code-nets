@@ -18,9 +18,9 @@ class GraphVarMinerModule(pl.LightningDataModule):
         super().__init__()
         self._config = config
         self._vocabulary = vocabulary
-        torch.multiprocessing.set_sharing_strategy("file_system")
-        self._manager = Manager()
-        self._cache_dict: Dict[str, list] = self._manager.dict()
+#        torch.multiprocessing.set_sharing_strategy("file_descriptor")
+#        self._manager = Manager()
+        self._cache_dict: Dict[str, list] = {}
         self._train: Optional[Dataset[Any]] = None
         self._validation: Optional[Dataset[Any]] = None
         self._test: Optional[Dataset[Any]] = None
@@ -51,11 +51,10 @@ class GraphVarMinerModule(pl.LightningDataModule):
 
     def _get_dataloader(self, mode: str):
         dataset = getattr(self, f"_{mode}")
-        dataloader_config = self._config["train"]["dataloader"]
+        dataloader_config = self._config[mode]["dataloader"]
         return DataLoader(
             dataset,
-            batch_size=dataloader_config["batch_size"],
-            num_workers=dataloader_config["num_workers"],
+            **dataloader_config
         )
 
     # shuffle is not supported due to IterableDataset

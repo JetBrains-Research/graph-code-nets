@@ -17,6 +17,8 @@ import zipfile
 from data_processing.vocabulary.vocabulary import Vocabulary
 from scripts.download_varnaming_dataset import download_from_google_drive
 
+import multiprocessing
+
 _graph_var_miner_edge_types = [
     "NextToken",
     "Child",
@@ -50,7 +52,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         pre_transform=None,
         pre_filter=None,
     ):
-        print("New iterable dataset created!")
+        print(f"New iterable dataset created! Id: {multiprocessing.current_process()}")
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
@@ -69,7 +71,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             self._cache_in_ram = False
 
         if self._cache_in_ram:
-            torch.multiprocessing.set_sharing_strategy("file_system")
+            torch.multiprocessing.set_sharing_strategy("file_descriptor")
 
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
@@ -84,9 +86,10 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
         self.__data_sample: Optional[Data] = None
 
-        self._cached_in_ram = (
-            cache_dict  # cache list of data samples, accessed by filename
-        )
+        self._cached_in_ram = cache_dict
+#        (
+#            cache_dict  # cache list of data samples, accessed by filename
+#        )
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
@@ -193,7 +196,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
     def __iter__(self) -> Iterator[Data]:
         worker_info = torch.utils.data.get_worker_info()
-        print(f"New iterable created by worker {worker_info.id}")
+        print(f"New iterable created by worker {worker_info.id}! Id: {multiprocessing.current_process()}")
         if worker_info is None:
             files_slice = self._data_files
         else:

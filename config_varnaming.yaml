@@ -18,15 +18,17 @@ vocabulary:
   max_token_length: 16  # In terms of (BPE) sub-tokens. 0.999 percentile word coverage
 
 data:
-  root: 'datasets/java_small/'
+  root: 'datasets/example_3_samples4'
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
+  cache_in_ram: True
 
 trainer:
-  max_epochs: 10
+  max_epochs: 5
   accelerator: gpu
   devices: 1
-  check_val_every_n_epoch: 5
+  check_val_every_n_epoch: 1
   precision: 16
+  num_sanity_val_steps: 0
 
 checkpoint:
   dir: 'checkpoints'
@@ -45,6 +47,9 @@ train:
   dataloader:
     batch_size: 64
     num_workers: 4
+    prefetch_factor: 2
+    pin_memory: True  # TODO investigate if has any effect
+    persistent_workers: True
 
 validation:
   dataset:
@@ -53,6 +58,8 @@ validation:
   dataloader:
     batch_size: 64
     num_workers: 4
+    pin_memory: True
+    persistent_workers: True
 
 test:
   dataset:
@@ -61,3 +68,5 @@ test:
   dataloader:
     batch_size: 64
     num_workers: 4
+    pin_memory: True
+    persistent_workers: True
