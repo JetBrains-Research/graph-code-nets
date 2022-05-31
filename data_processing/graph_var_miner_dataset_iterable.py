@@ -128,12 +128,12 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         )
 
     def _process_tokens(self, tokens: list) -> torch.Tensor:
-        tokens_processed = []
-        for token in tokens:
+        out_tensor = np.zeros((len(tokens), self._max_token_len), dtype=int)
+        for i, token in enumerate(tokens):
             enc = self._vocabulary.encode(token)[: self._max_token_len]
-            pad_enc = np.pad(enc, (0, self._max_token_len - len(enc)))
-            tokens_processed.append(pad_enc)
-        return torch.Tensor(np.array(tokens_processed), device=self.device)
+            length = len(enc)
+            out_tensor[i, :length] = enc
+        return torch.Tensor(out_tensor, device=self.device)
 
     def _data_sample(self):
         if self.__data_sample is None:
