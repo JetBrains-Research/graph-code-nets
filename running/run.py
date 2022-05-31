@@ -28,10 +28,9 @@ wandb_logger = WandbLogger(project="graph-nets-test")
 trainer = pl.Trainer(
     accelerator="gpu",
     devices=1,
-    max_epochs=3,
-    val_check_interval=0.3,
+    max_epochs=2,
+    val_check_interval=0.2,
     logger=wandb_logger,
-    accumulate_grad_batches=4,
 )
 trainer.fit(
     model=model,

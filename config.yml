@@ -3,7 +3,7 @@ paths:
   raw_data: "../data"
   vocab: "../vocab.txt"
 model:
-  configuration: "ggnn"
+  configuration: "rggnn"
   base:
     hidden_dim: 128
     dropout_rate: 0.1
@@ -13,6 +13,8 @@ model:
   ggnn:
     num_layers: 8
   gcn:
+    num_layers: 8
+  rggnn:
     num_layers: 8
 data:
   batch_size: 64 # In samples

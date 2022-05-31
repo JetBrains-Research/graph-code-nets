@@ -49,6 +49,12 @@ class VarMisuseLayer(pl.LightningModule):
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gcn"]["num_layers"],
             )
+        elif inner_model == "rggnn":
+            self._model = encoder_gcn.GCNEncoder(
+                -1,
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["rggnn"]["num_layers"],
+            )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
