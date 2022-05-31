@@ -109,9 +109,9 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             edges_type = _graph_var_miner_edge_types_to_idx[edges_typed_group[0]]
             edge_index.extend(edges_typed_group[1])
             edge_attr.extend([edges_type] * len(edges_typed_group[1]))
-        edge_index_t = torch.tensor(edge_index, device=self.device).t().contiguous()
+        edge_index_t = torch.tensor(np.array(edge_index), device=self.device).t().contiguous()
         edge_weight_t = torch.tensor(
-            edge_attr, dtype=torch.float, device=self.device
+            np.array(edge_attr), dtype=torch.float, device=self.device
         )  # TODO incorrect, fix (must be edge_attr)
 
         filename = dct["filename"]
