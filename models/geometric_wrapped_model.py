@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn
+from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn, encoder_rggnn, encoder_gatv2conv
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.data import Data
@@ -50,10 +50,16 @@ class VarMisuseLayer(pl.LightningModule):
                 self._model_config["gcn"]["num_layers"],
             )
         elif inner_model == "rggnn":
-            self._model = encoder_gcn.GCNEncoder(
+            self._model = encoder_rggnn.RGGNNEncoder(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["rggnn"]["num_layers"],
+            )
+        elif inner_model == "gatv2conv":
+            self._model = encoder_gatv2conv.GATv2ConvEncoder(
+                -1,
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["gatv2conv"]["num_layers"],
             )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
