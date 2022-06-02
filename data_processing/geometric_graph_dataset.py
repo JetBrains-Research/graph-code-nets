@@ -118,7 +118,7 @@ class GraphDataset(Dataset):
             [error_location_labels, repair_targets_labels, repair_candidates_labels,],
             1,
         )
-        return_data = Data(tokens, edge_index=edge_index, y=labels)
+        return_data = Data(tokens, edge_index=edge_index, edge_attr=edge_attr, y=labels)
         return return_data
 
     def process_line(self, line: str) -> Data:

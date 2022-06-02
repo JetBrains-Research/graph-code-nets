@@ -25,6 +25,10 @@ class VarMisuseLayer(pl.LightningModule):
             self._vocab_dim, self._model_config["base"]["hidden_dim"]
         )
 
+        self._edge_embedding = torch.nn.Embedding(
+            self._model_config["base"]["num_edge_types"], self._model_config["base"]["edge_attr_dim"]
+        )
+
         self._positional_encoding = torch.nn.Parameter(
             positional_encoding(
                 self._model_config["base"]["hidden_dim"],
@@ -60,20 +64,28 @@ class VarMisuseLayer(pl.LightningModule):
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gatv2conv"]["num_layers"],
+                self._model_config["base"]["edge_attr_dim"]
             )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
     def forward(  # type: ignore[override]
-        self, tokens: torch.Tensor, edges: torch.Tensor, batch_size: int
+        self, tokens: torch.Tensor, edges: torch.Tensor, edge_attr: torch.Tensor, batch_size: int
     ) -> torch.Tensor:
         subtoken_embeddings = self._embedding(tokens) * torch.unsqueeze(
             torch.clamp(tokens, 0, 1), -1
         )
+        edge_embeddings = self._edge_embedding(edge_attr)
         states = torch.mean(subtoken_embeddings, 1)
         positional_encoding_addition = self._positional_encoding.repeat(batch_size, 1)
         states += positional_encoding_addition
-        predictions = self._model(states, edges)
+
+        predictions: torch.Tensor
+        if self._model_config["configuration"] == "gatv2conv":
+            predictions = self._model(states, edges, edge_embeddings.float())
+        else:
+            predictions = self._model(states, edges)
+
         return self._prediction(predictions)
 
     def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
@@ -86,8 +98,8 @@ class VarMisuseLayer(pl.LightningModule):
         return self._shared_eval_step(batch, batch_idx, "test")
 
     def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
-        batch_size = batch.batch[-1] + 1
-        pointer_preds = self(batch.x, batch.edge_index, batch_size)
+        batch_size = int(batch.batch[-1] + 1)
+        pointer_preds = self(batch.x, batch.edge_index, batch.edge_attr, batch_size)
         pointer_preds_t = to_dense_batch(pointer_preds, batch.batch)[0]
         pointer_preds_t = torch.transpose(pointer_preds_t, 1, 2)
         token_mask = torch.clamp(torch.sum(batch.x, -1), 0, 1)

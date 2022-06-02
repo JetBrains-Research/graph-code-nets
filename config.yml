@@ -3,11 +3,12 @@ paths:
   raw_data: "../data"
   vocab: "../vocab.txt"
 model:
-  configuration: "rggnn"
+  configuration: "gatv2conv"
   base:
     hidden_dim: 128
     dropout_rate: 0.1
-    num_edge_types: 24
+    num_edge_types: 13
+    edge_attr_dim: 32
   rnn:
     num_layers: 8
   ggnn:
