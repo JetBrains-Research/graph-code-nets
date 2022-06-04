@@ -23,7 +23,7 @@ def change_dict(original_dict, vocab, max_token_length):
 
 def preprocess(files, vocab, max_token_length):
     file_from, file_to = files
-    print(file_from, file_to, vocab, max_token_length)
+    print(f"{file_from} -> {file_to}")
     gz_from = gzip.open(file_from, "rb")
     items_from = ijson.items(gz_from, "item")
 
