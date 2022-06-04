@@ -1,8 +1,6 @@
-from multiprocessing import Manager
-from typing import Any, Optional, Dict
+from typing import Any, Optional
 
 import pytorch_lightning as pl
-import torch
 from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 
@@ -48,10 +46,7 @@ class GraphVarMinerModule(pl.LightningDataModule):
     def _get_dataloader(self, mode: str):
         dataset = getattr(self, f"_{mode}")
         dataloader_config = self._config[mode]["dataloader"]
-        return DataLoader(
-            dataset,
-            **dataloader_config
-        )
+        return DataLoader(dataset, **dataloader_config)
 
     # shuffle is not supported due to IterableDataset
     def train_dataloader(self) -> DataLoader:

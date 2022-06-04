@@ -1,9 +1,9 @@
 import gzip
 import math
-import os
+import multiprocessing
 import pathlib
 from itertools import chain
-from typing import Iterator, Optional, Union, List, Tuple
+from typing import Iterator, Optional, List, Dict
 
 import ijson
 import numpy as np
@@ -11,13 +11,8 @@ import torch
 from torch.utils.data import IterableDataset
 from torch_geometric.data import Data, Dataset
 
-import gdown
-import zipfile
-
 from data_processing.vocabulary.vocabulary import Vocabulary
 from scripts.download_varnaming_dataset import download_from_google_drive
-
-import multiprocessing
 
 _graph_var_miner_edge_types = [
     "NextToken",
@@ -50,12 +45,14 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         transform=None,
         pre_transform=None,
         pre_filter=None,
+        logger=None,
     ):
         print(f"New iterable dataset created! Id: {multiprocessing.current_process()}")
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
         self.device = device
+        self._logger = logger
 
         if "root" in self._config[self._mode]["dataset"]:
             self._root = self._config[self._mode]["dataset"]["root"]
@@ -85,7 +82,9 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
         self.__data_sample: Optional[Data] = None
 
-        self._cached_in_ram = {}  # cache list of data samples, accessed by filename
+        self._cached_in_ram: Dict[
+            str, list
+        ] = {}  # cache list of data samples, accessed by filename
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
