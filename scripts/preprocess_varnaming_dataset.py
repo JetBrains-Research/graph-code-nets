@@ -68,7 +68,7 @@ def main():
     for file in input_path.rglob('*.json.gz'):
         out_file = output_path / file.relative_to(input_path)
         if file.is_file():
-            out_file.parent.mkdir(parents=True)
+            out_file.parent.mkdir(parents=True, exist_ok=True)
             if file.suffixes[-2:] == [".json", ".gz"]:
                 files_to_preprocess.append((file, out_file))
 
