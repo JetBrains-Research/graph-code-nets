@@ -20,7 +20,7 @@ vocabulary:
 data:
   root: 'datasets/example_3_samples4'
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
-  cache_in_ram: True
+  cache_in_ram: True  # if True, must be used with dataloader.persistent_workers: True
   preprocessed: True
   max_node_count: 50000  # 0.99999 percentile; bigger graphs could cause OOM and will be ignored
 

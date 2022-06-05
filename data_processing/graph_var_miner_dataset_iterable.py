@@ -94,7 +94,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
         self._cached_in_ram: Dict[
             str, list
-        ] = {}  # cache list of data samples, accessed by filename
+        ] = {}  # cache list of data samples, accessed by filename; process local (so
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
