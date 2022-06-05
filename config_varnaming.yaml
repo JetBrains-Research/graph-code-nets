@@ -22,6 +22,7 @@ data:
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
   cache_in_ram: True
   preprocessed: True
+  max_node_count: 50000  # 0.99999 percentile; bigger graphs could cause OOM and will be ignored
 
 trainer:
   max_epochs: 5

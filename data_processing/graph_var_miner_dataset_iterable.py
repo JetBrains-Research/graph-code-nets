@@ -74,6 +74,11 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         else:
             self._preprocessed = self._config["data"]["preprocessed"]
 
+        if "max_node_count" in self._config[self._mode]["dataset"]:
+            self._max_node_count = self._config[self._mode]["dataset"]["max_node_count"]
+        else:
+            self._max_node_count = self._config["data"]["max_node_count"]
+
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
 
@@ -100,7 +105,10 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def raw_paths(self) -> List[str]:
         return [self._root]
 
-    def _item_from_dict(self, dct) -> Data:
+    def _item_from_dict(self, dct) -> Optional[Data]:  # None means "skip this graph"
+        if len(dct["ContextGraph"]["NodeLabels"]) > self._max_nodes_count:
+            return None
+
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
         tokens = self._process_tokens(nodes)
         if self._preprocessed:
@@ -184,7 +192,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             return iter(self._cached_in_ram[filename])
         f = gzip.open(str(filename), "rb")
         items = ijson.items(f, "item")
-        items_iter = map(self._item_from_dict, items)
+        items_iter = filter(lambda x: x is not None, map(self._item_from_dict, items))
         if self._cache_in_ram:
             self._cached_in_ram[filename] = list(items_iter)
 
