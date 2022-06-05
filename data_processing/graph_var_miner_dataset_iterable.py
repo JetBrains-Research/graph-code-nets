@@ -106,7 +106,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         return [self._root]
 
     def _item_from_dict(self, dct) -> Optional[Data]:  # None means "skip this graph"
-        if len(dct["ContextGraph"]["NodeLabels"]) > self._max_nodes_count:
+        if len(dct["ContextGraph"]["NodeLabels"]) > self._max_node_count:
             return None
 
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
@@ -130,7 +130,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             edge_index.extend(edges_typed_group[1])
             edge_attr.extend([edges_type] * len(edges_typed_group[1]))
         edge_index_t = torch.tensor(edge_index, device=self.device).t().contiguous()
-        edge_weight_t = torch.tensor(
+        edge_attr_t = torch.tensor(
             edge_attr, dtype=torch.float, device=self.device
         )  # TODO incorrect, fix (must be edge_attr)
 
@@ -140,7 +140,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         return Data(
             x=tokens,
             edge_index=edge_index_t,
-            edge_weight=edge_weight_t,
+            edge_attr=edge_attr_t,
             filename=filename,
             name=name,
             types=types,
