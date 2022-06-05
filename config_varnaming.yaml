@@ -21,6 +21,7 @@ data:
   root: 'datasets/example_3_samples4'
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
   cache_in_ram: True
+  preprocessed: True
 
 trainer:
   max_epochs: 5

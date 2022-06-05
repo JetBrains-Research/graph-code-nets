@@ -69,6 +69,11 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         if self._cache_in_ram:
             torch.multiprocessing.set_sharing_strategy("file_descriptor")
 
+        if "preprocessed" in self._config[self._mode]["dataset"]:
+            self._preprocessed = self._config[self._mode]["dataset"]["preprocessed"]
+        else:
+            self._preprocessed = self._config["data"]["preprocessed"]
+
         self._max_token_len = self._config["vocabulary"]["max_token_length"]
         self._debug = self._config[self._mode]["dataset"]["debug"]
 
@@ -129,7 +134,10 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def _process_tokens(self, tokens: list) -> torch.Tensor:
         out_tensor = np.zeros((len(tokens), self._max_token_len), dtype=int)
         for i, token in enumerate(tokens):
-            enc = self._vocabulary.encode(token)[: self._max_token_len]
+            if self._preprocessed:
+                enc = token
+            else:
+                enc = self._vocabulary.encode(token)[: self._max_token_len]
             length = len(enc)
             out_tensor[i, :length] = enc
         return torch.Tensor(out_tensor, device=self.device)
