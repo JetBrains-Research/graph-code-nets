@@ -1,6 +1,7 @@
 import argparse
 import gzip
 import json
+import math
 import pathlib
 from multiprocessing import Pool
 
@@ -9,14 +10,9 @@ import ijson
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from data_processing.vocabulary.spm_vocabulary import SPMVocabulary
 
-vocabulary = None
-max_token_length = None
-
 
 # inplace
-def change_dict(original_dict):
-    global vocabulary
-    global max_token_length
+def change_dict(original_dict, vocabulary, max_token_length):
     ret_dict = original_dict.copy()
     ret_dict["ContextGraph"]["NodeLabels"] = {
         k: vocabulary.encode(v)[:max_token_length]
@@ -29,17 +25,38 @@ def change_dict(original_dict):
     return ret_dict
 
 
-def preprocess(files):
+def preprocess(files, vocabulary, max_token_length):
     file_from, file_to = files
     print(f"{file_from} -> {file_to}")
     gz_from = gzip.open(file_from, "rb")
     items_from = ijson.items(gz_from, "item")
 
-    items_to = list(map(change_dict, items_from))
+    items_to = list(
+        map(lambda x: change_dict(x, vocabulary, max_token_length), items_from)
+    )
     json_to = json.dumps(items_to)
     with gzip.open(file_to, "wt") as gz_to:
         gz_to.write(json_to)
     gz_from.close()
+
+
+def launch_preprocess(args, files, num):
+    if args.vocabulary_type == "spm":
+        vocabulary = SPMVocabulary(args.vocabulary_path)
+    elif args.vocabulary_type == "great":
+        vocabulary = GreatVocabulary(args.vocabulary_path)
+    else:
+        return
+
+    max_token_length = args.max_token_length
+
+    per_worker = int(math.ceil(len(files) / args.num_workers))
+    files_start = num * per_worker
+    files_end = min(len(files), files_start + per_worker)
+    files_slice = files[files_start:files_end].copy()
+
+    for file in files_slice:
+        preprocess(file, vocabulary, max_token_length)
 
 
 def main():
@@ -72,15 +89,8 @@ def main():
     if output_path.exists():
         raise ValueError(f"{output_path} already exists")
 
-    global vocabulary
-    if args.vocabulary_type == "spm":
-        vocabulary = SPMVocabulary(args.vocabulary_path)
-    elif args.vocabulary_type == "great":
-        vocabulary = GreatVocabulary(args.vocabulary_path)
-    else:
+    if args.vocabulary_type not in ["spm", "great"]:
         raise ValueError(f"Unknown vocabulary type: {args.vocabulary_type}")
-    global max_token_length
-    max_token_length = args.max_token_length
 
     files_to_preprocess = []
     for file in input_path.rglob("*.json.gz"):
@@ -91,9 +101,9 @@ def main():
                 files_to_preprocess.append((file, out_file))
 
     with Pool(args.num_workers) as p:
-        p.map(
-            preprocess,
-            files_to_preprocess,
+        p.starmap(
+            launch_preprocess,
+            [(args, files_to_preprocess, i) for i in range(args.num_workers)],
         )
 
 
