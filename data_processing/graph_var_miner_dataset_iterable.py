@@ -104,7 +104,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
         tokens = self._process_tokens(nodes)
         marked_tokens = torch.tensor(
-            np.array(nodes) == "<var>", dtype=torch.float, device=self.device
+            np.array(nodes) == self._vocabulary.encode("<var>"), dtype=torch.float, device=self.device
         )
 
         edge_index = []
