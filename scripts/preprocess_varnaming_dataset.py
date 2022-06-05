@@ -1,5 +1,4 @@
 import argparse
-import functools
 import gzip
 import json
 import pathlib
@@ -10,26 +9,33 @@ import ijson
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from data_processing.vocabulary.spm_vocabulary import SPMVocabulary
 
+vocabulary = None
+max_token_length = None
+
 
 # inplace
-def change_dict(original_dict, vocab, max_token_length):
+def change_dict(original_dict):
+    global vocabulary
+    global max_token_length
     ret_dict = original_dict.copy()
     ret_dict["ContextGraph"]["NodeLabels"] = {
-        k: vocab.encode(v)[:max_token_length]
+        k: vocabulary.encode(v)[:max_token_length]
         for (k, v) in ret_dict["ContextGraph"]["NodeLabels"].items()
     }
-    ret_dict["name"] = vocab.encode(ret_dict["name"])[:max_token_length]
-    ret_dict["types"] = vocab.encode(ret_dict["types"])[:max_token_length]
+    ret_dict["name"] = vocabulary.encode(ret_dict["name"])[:max_token_length]
+    ret_dict["types"] = list(
+        map(lambda t: t[:max_token_length], vocabulary.encode(ret_dict["types"]))
+    )
     return ret_dict
 
 
-def preprocess(files, vocab, max_token_length):
+def preprocess(files):
     file_from, file_to = files
     print(f"{file_from} -> {file_to}")
     gz_from = gzip.open(file_from, "rb")
     items_from = ijson.items(gz_from, "item")
 
-    items_to = list(map(lambda x: change_dict(x, vocab, max_token_length), items_from))
+    items_to = list(map(change_dict, items_from))
     json_to = json.dumps(items_to)
     with gzip.open(file_to, "wt") as gz_to:
         gz_to.write(json_to)
@@ -66,12 +72,15 @@ def main():
     if output_path.exists():
         raise ValueError(f"{output_path} already exists")
 
+    global vocabulary
     if args.vocabulary_type == "spm":
         vocabulary = SPMVocabulary(args.vocabulary_path)
     elif args.vocabulary_type == "great":
         vocabulary = GreatVocabulary(args.vocabulary_path)
     else:
         raise ValueError(f"Unknown vocabulary type: {args.vocabulary_type}")
+    global max_token_length
+    max_token_length = args.max_token_length
 
     files_to_preprocess = []
     for file in input_path.rglob("*.json.gz"):
@@ -83,9 +92,7 @@ def main():
 
     with Pool(args.num_workers) as p:
         p.map(
-            functools.partial(
-                preprocess, vocab=vocabulary, max_token_length=args.max_token_length
-            ),
+            preprocess,
             files_to_preprocess,
         )
 

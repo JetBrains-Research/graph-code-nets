@@ -103,9 +103,17 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def _item_from_dict(self, dct) -> Data:
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
         tokens = self._process_tokens(nodes)
-        marked_tokens = torch.tensor(
-            np.array(nodes) == self._vocabulary.encode("<var>"), dtype=torch.float, device=self.device
-        )
+        if self._preprocessed:
+            var_encoded = self._vocabulary.encode("<var>")
+            marked_tokens = torch.tensor(
+                [node == var_encoded for node in nodes],
+                dtype=torch.float,
+                device=self.device,
+            )
+        else:
+            marked_tokens = torch.tensor(
+                np.array(nodes) == "<var>", dtype=torch.float, device=self.device
+            )
 
         edge_index = []
         edge_attr = []
