@@ -102,15 +102,17 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         self._worker_id: Optional[int] = None
 
         self._local_epoch_counter: Optional[int] = None
-        self._log_table = None
 
         if isinstance(self._logger, WandbLogger):
+            self._manager = multiprocessing.Manager()
+            self._namespace = self._manager.Namespace()
+
             self._local_epoch_counter = 0
-            self._log_table = Value(
-                "log_table", wandb.Table(columns=["epoch", "worker", "filename"])
+            self._namespace._log_table = wandb.Table(
+                columns=["epoch", "worker", "filename"]
             )
             self._logger.log_metrics(
-                {"varnaming_dataset_loading": self._log_table.value}
+                {"varnaming_dataset_loading": self._namespace._log_table}
             )
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
@@ -212,7 +214,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
 
     def _items_from_file(self, filename):
         if isinstance(self._logger, WandbLogger):
-            self._log_table.value.add_row(
+            self._namespace._log_table.add_row(
                 [self._local_epoch_counter, self._worker_id, filename]
             )
 
