@@ -17,7 +17,7 @@ import wandb
 
 def main():
     config_path = (
-        "/home/yourass/Desktop/proga/hse21/nir2/graph-code-nets/config_varnaming.yaml"
+        "config_varnaming.yaml"
     )
 
     with open(config_path) as f:
