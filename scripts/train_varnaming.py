@@ -12,10 +12,20 @@ from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from data_processing.vocabulary.spm_vocabulary import SPMVocabulary
 from models.varnaming import VarNamingModel
 
+import wandb
+
 
 def main():
-    with open("config_varnaming.yaml") as f:
+    config_path = (
+        "/home/yourass/Desktop/proga/hse21/nir2/graph-code-nets/config_varnaming.yaml"
+    )
+
+    with open(config_path) as f:
         config = yaml.safe_load(f)
+
+    logger = WandbLogger(**config["logger"])
+
+    wandb.save(config_path, policy="now")
 
     if "path" not in config["vocabulary"]:
         raise ValueError(
@@ -30,10 +40,7 @@ def main():
     else:
         raise ValueError(f'Unknown vocabulary type: {config["vocabulary"]["type"]}')
 
-    datamodule = GraphVarMinerModule(
-        config,
-        vocabulary,
-    )
+    datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
     model = VarNamingModel(config, vocabulary)
 
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime(
@@ -45,7 +52,6 @@ def main():
         save_top_k=int(config["checkpoint"]["top_k"]),
         monitor="validation_loss",
     )
-    logger = WandbLogger(**config["logger"])
 
     trainer = pl.Trainer(
         **config["trainer"], callbacks=[checkpoint_callback], logger=logger
