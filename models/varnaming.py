@@ -229,6 +229,12 @@ class VarNamingModel(pl.LightningModule):
             on_epoch=True,
             batch_size=batch.num_graphs,
         )
+        self.log(
+            f"{step}_items_processed",
+            float(batch_idx*batch.num_graphs),
+            prog_bar=True,
+            batch_size=batch.num_graphs,
+        )
         return loss
 
     def training_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore

@@ -29,6 +29,7 @@ trainer:
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 1
+  val_check_interval: 0.25  # 4 times per train epoch
   precision: 16
 
 checkpoint:
