@@ -3,13 +3,14 @@ import math
 import multiprocessing
 import pathlib
 from itertools import chain
+from multiprocessing import Value
 from typing import Iterator, Optional, List, Dict
 
 import ijson
 import numpy as np
 import torch
 import wandb
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers.wandb import WandbLogger
 from torch.utils.data import IterableDataset
 from torch_geometric.data import Data, Dataset
 
@@ -101,13 +102,16 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         self._worker_id: Optional[int] = None
 
         self._local_epoch_counter: Optional[int] = None
-        self._log_table_name: Optional[str] = None
-        self._log_columns: Optional[list] = None
+        self._log_table = None
 
-        if self._logger is WandbLogger:
+        if isinstance(self._logger, WandbLogger):
             self._local_epoch_counter = 0
-            self._log_table = wandb.Table(columns=["epoch", "worker", "filename"])
-            self._logger.log_metrics({"varnaming_dataset_loading": self._log_table})
+            self._log_table = Value(
+                "log_table", wandb.Table(columns=["epoch", "worker", "filename"])
+            )
+            self._logger.log_metrics(
+                {"varnaming_dataset_loading": self._log_table.value}
+            )
 
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
@@ -207,8 +211,8 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         )
 
     def _items_from_file(self, filename):
-        if self._logger is WandbLogger:
-            self._log_table.add_row(
+        if isinstance(self._logger, WandbLogger):
+            self._log_table.value.add_row(
                 [self._local_epoch_counter, self._worker_id, filename]
             )
 
