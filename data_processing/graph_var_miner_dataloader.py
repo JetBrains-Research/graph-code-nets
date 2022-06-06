@@ -1,6 +1,7 @@
 from typing import Any, Optional
 
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import LightningLoggerBase
 from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 
@@ -12,10 +13,13 @@ from data_processing.vocabulary.vocabulary import Vocabulary
 
 
 class GraphVarMinerModule(pl.LightningDataModule):
-    def __init__(self, config: dict, vocabulary: Vocabulary):
+    def __init__(
+        self, config: dict, vocabulary: Vocabulary, logger: LightningLoggerBase
+    ):
         super().__init__()
         self._config = config
         self._vocabulary = vocabulary
+        self._logger: LightningLoggerBase = logger
         self._train: Optional[Dataset[Any]] = None
         self._validation: Optional[Dataset[Any]] = None
         self._test: Optional[Dataset[Any]] = None
@@ -31,6 +35,7 @@ class GraphVarMinerModule(pl.LightningDataModule):
                 config=self._config,
                 mode=mode,
                 vocabulary=self._vocabulary,
+                logger=self._logger,
             ),
         )
 

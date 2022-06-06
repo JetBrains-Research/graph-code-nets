@@ -8,6 +8,8 @@ from typing import Iterator, Optional, List, Dict
 import ijson
 import numpy as np
 import torch
+import wandb
+from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import IterableDataset
 from torch_geometric.data import Data, Dataset
 
@@ -96,6 +98,17 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             str, list
         ] = {}  # cache list of data samples, accessed by filename; process local (so
 
+        self._worker_id: Optional[int] = None
+
+        self._local_epoch_counter: Optional[int] = None
+        self._log_table_name: Optional[str] = None
+        self._log_columns: Optional[list] = None
+
+        if self._logger is WandbLogger:
+            self._local_epoch_counter = 0
+            self._log_table = wandb.Table(columns=["epoch", "worker", "filename"])
+            self._logger.log_metrics({"varnaming_dataset_loading": self._log_table})
+
         super().__init__(self._root, transform, pre_transform, pre_filter)
 
     def download(self):
@@ -105,8 +118,14 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def raw_paths(self) -> List[str]:
         return [self._root]
 
-    def _item_from_dict(self, dct) -> Optional[Data]:  # None means "skip this graph"
+    def _item_from_dict(
+        self, dct, filename_from
+    ) -> Optional[Data]:  # None means "skip this graph"
         if len(dct["ContextGraph"]["NodeLabels"]) > self._max_node_count:
+            print(
+                f"Ignoring too large graph from {filename_from} "
+                f'(have {len(dct["ContextGraph"]["NodeLabels"])} nodes > max_node_count = {self._max_node_count})'
+            )
             return None
 
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())
@@ -188,11 +207,19 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         )
 
     def _items_from_file(self, filename):
+        if self._logger is WandbLogger:
+            self._log_table.add_row(
+                [self._local_epoch_counter, self._worker_id, filename]
+            )
+
         if self._cache_in_ram and filename in self._cached_in_ram:
             return iter(self._cached_in_ram[filename])
         f = gzip.open(str(filename), "rb")
         items = ijson.items(f, "item")
-        items_iter = filter(lambda x: x is not None, map(self._item_from_dict, items))
+        items_iter = filter(
+            lambda x: x is not None,
+            map(lambda item: self._item_from_dict(item, filename), items),
+        )
         if self._cache_in_ram:
             self._cached_in_ram[filename] = list(items_iter)
 
@@ -210,14 +237,17 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         raise NotImplementedError
 
     def __iter__(self) -> Iterator[Data]:
+        if self._logger is WandbLogger:
+            self._local_epoch_counter += 1  # type: ignore
+
         worker_info = torch.utils.data.get_worker_info()
         # print(f"New iterable created by worker {worker_info.id}! Id: {multiprocessing.current_process()}")
         if worker_info is None:
             files_slice = self._data_files
         else:
             per_worker = int(math.ceil(len(self._data_files) / worker_info.num_workers))
-            worker_id = worker_info.id
-            files_start = worker_id * per_worker
+            self._worker_id = worker_info.id
+            files_start = self._worker_id * per_worker  # type: ignore
             files_end = min(len(self._data_files), files_start + per_worker)
             files_slice = self._data_files[files_start:files_end]
         return chain.from_iterable(map(self._items_from_file, files_slice))
