@@ -50,7 +50,6 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         pre_filter=None,
         logger=None,
     ):
-        print(f"New iterable dataset created! Id: {multiprocessing.current_process()}")
         self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
@@ -99,23 +98,12 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             str, list
         ] = {}  # cache list of data samples, accessed by filename; process local (so
 
-        self._worker_id: Optional[int] = None
-
-        self._local_epoch_counter: Optional[int] = None
-
-        if isinstance(self._logger, WandbLogger):
-            self._manager = multiprocessing.Manager()
-            self._namespace = self._manager.Namespace()
-
-            self._local_epoch_counter = 0
-            self._namespace._log_table = wandb.Table(
-                columns=["epoch", "worker", "filename"]
-            )
-            self._logger.log_metrics(
-                {"varnaming_dataset_loading": self._namespace._log_table}
-            )
-
         super().__init__(self._root, transform, pre_transform, pre_filter)
+
+        if self._debug:
+            print(
+                f"New iterable dataset created! Id: {multiprocessing.current_process()}"
+            )
 
     def download(self):
         download_from_google_drive(self._root, self._config["data"]["link"])
@@ -155,9 +143,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             edge_index.extend(edges_typed_group[1])
             edge_attr.extend([edges_type] * len(edges_typed_group[1]))
         edge_index_t = torch.tensor(edge_index, device=self.device).t().contiguous()
-        edge_attr_t = torch.tensor(
-            edge_attr, dtype=torch.float, device=self.device
-        )  # TODO incorrect, fix (must be edge_attr)
+        edge_attr_t = torch.tensor(edge_attr, dtype=torch.float, device=self.device)
 
         filename = dct["filename"]
         name = self._process_tokens([dct["name"]])
@@ -213,10 +199,8 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         )
 
     def _items_from_file(self, filename):
-        if isinstance(self._logger, WandbLogger):
-            self._namespace._log_table.add_row(
-                [self._local_epoch_counter, self._worker_id, filename]
-            )
+        if self._debug:
+            print(f"Processing graphs from {filename}")
 
         if self._cache_in_ram and filename in self._cached_in_ram:
             return iter(self._cached_in_ram[filename])
@@ -229,8 +213,13 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         if self._cache_in_ram:
             self._cached_in_ram[filename] = list(items_iter)
 
-            # worker_num = torch.utils.data.get_worker_info().id
-            # print(f"Worker #{worker_num}, cached {filename}")
+            if self._debug:
+                worker_info = torch.utils.data.get_worker_info()
+                if worker_info is not None:
+                    worker_num = worker_info.id
+                else:
+                    worker_num = -1
+                print(f"Worker #{worker_num}, cached {filename}")
 
             return iter(self._cached_in_ram[filename])
         else:
@@ -243,17 +232,17 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         raise NotImplementedError
 
     def __iter__(self) -> Iterator[Data]:
-        if self._logger is WandbLogger:
-            self._local_epoch_counter += 1  # type: ignore
-
         worker_info = torch.utils.data.get_worker_info()
-        # print(f"New iterable created by worker {worker_info.id}! Id: {multiprocessing.current_process()}")
+        if self._debug:
+            print(
+                f"New iterable created by worker {worker_info.id}! Id: {multiprocessing.current_process()}"
+            )
         if worker_info is None:
             files_slice = self._data_files
         else:
             per_worker = int(math.ceil(len(self._data_files) / worker_info.num_workers))
-            self._worker_id = worker_info.id
-            files_start = self._worker_id * per_worker  # type: ignore
+            worker_id = worker_info.id
+            files_start = worker_id * per_worker  # type: ignore
             files_end = min(len(self._data_files), files_start + per_worker)
             files_slice = self._data_files[files_start:files_end]
         return chain.from_iterable(map(self._items_from_file, files_slice))
