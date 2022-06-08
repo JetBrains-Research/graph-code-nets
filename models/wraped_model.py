@@ -1,10 +1,10 @@
 import numpy as np
-import models.util as util
+import models.utils as util
 import torch
 import torch.nn.functional as F
 from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn
 import pytorch_lightning as pl
-from models.util import (
+from models.utils import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
 )

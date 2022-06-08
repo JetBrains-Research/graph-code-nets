@@ -4,7 +4,7 @@ from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn, enco
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.data import Data
-from models.util import (
+from models.utils import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
     join_dicts,
