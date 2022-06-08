@@ -44,7 +44,9 @@ def main():
     datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
     model = VarNamingModel.load_from_checkpoint(checkpoint_path=ckpt_path, config=config, vocabulary=vocabulary)
 
-    trainer = pl.Trainer(logger=logger)
+    trainer = pl.Trainer(
+        **config["trainer"], logger=logger
+    )
 
     trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
 
