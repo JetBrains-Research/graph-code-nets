@@ -6,7 +6,7 @@ from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 
 # DataLoader expects output to be tensor, but yet they are GraphDatasetItemBase, so we need collate_fn
-from data_processing.graph_var_miner_dataset_iterable import (
+from data_processing.graph_var_miner.graph_var_miner_dataset_iterable import (
     GraphVarMinerDatasetIterable,
 )
 from data_processing.vocabulary.vocabulary import Vocabulary

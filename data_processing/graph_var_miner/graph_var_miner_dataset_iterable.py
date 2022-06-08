@@ -3,14 +3,11 @@ import math
 import multiprocessing
 import pathlib
 from itertools import chain
-from multiprocessing import Value
 from typing import Iterator, Optional, List, Dict
 
 import ijson
 import numpy as np
 import torch
-import wandb
-from pytorch_lightning.loggers.wandb import WandbLogger
 from torch.utils.data import IterableDataset
 from torch_geometric.data import Data, Dataset
 
