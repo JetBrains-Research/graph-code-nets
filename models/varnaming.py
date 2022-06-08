@@ -304,9 +304,7 @@ class VarNamingModel(pl.LightningModule):
         return self._shared_step(batch, batch_idx, "train")
 
     def validation_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        loss = self._shared_step(batch, batch_idx, "validation")
-        self._generate_shared_step(batch, batch_idx, "validation")
-        return loss
+        return self._shared_step(batch, batch_idx, "validation")
 
     def test_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
         loss = self._shared_step(batch, batch_idx, "test")
