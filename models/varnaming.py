@@ -80,7 +80,11 @@ class VarNamingModel(pl.LightningModule):
 
         if self.config["model"]["decoder"] == "transformer_decoder":
             if method == "greedy":
-                generated = []
+                generated_batch = torch.ones(
+                    (varname_batch.size(0), 1, self.max_token_length),
+                    dtype=torch.int,
+                    device=self.device,
+                ).fill_(self.vocabulary.pad_id())
                 for b_i in range(varname_batch.size(0)):
                     varname_batch_part = varname_batch[
                         b_i : b_i + 1, :
@@ -114,17 +118,8 @@ class VarNamingModel(pl.LightningModule):
                             dim=1,
                         )
 
-                    current = torch.cat(
-                        [current, torch.ones((1, 1)).fill_(self.vocabulary.eos_id())],
-                        dim=1,
-                    )
-                    padded = F.pad(
-                        current, (0, self.max_token_length - current.size(1))
-                    )
-                    generated.append(padded)
-                generated_batch = torch.cat(
-                    generated, dim=0
-                ).int()  # shape: (batch_size, max_token_length)
+                    generated_batch[b_i:b_i+1, 0, :current.size(1)] = current
+                    generated_batch[b_i, 0, current.size(1)] = self.vocabulary.eos_id()
                 return generated_batch
             elif method == "beam_search":
 
@@ -250,7 +245,7 @@ class VarNamingModel(pl.LightningModule):
 
         dense_batch_name = to_dense_batch(batch.name)[
             0
-        ]  # (batch, 1, dim)  # 1 because there is only 1 name in sample
+        ].transpose(0, 1)  # (batch, 1, dim)  # 1 because there is only 1 name in sample
 
         eqs = generated.eq(dense_batch_name)  # (batch, top_k, dim)
 
@@ -264,7 +259,7 @@ class VarNamingModel(pl.LightningModule):
             exact_eqs[:, :mrr_k].any(dim=1).float()
         )  # (batch)  # if not found, then inv rank is 0
         arange = torch.arange(
-            generated.size(mrr_k, 0, -1), device=self.device
+            mrr_k, 0, -1, device=self.device
         ).unsqueeze(
             0
         )  # (batch, mrr_k)
