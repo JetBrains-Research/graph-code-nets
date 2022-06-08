@@ -47,6 +47,8 @@ def main():
         raise ValueError(f'Unknown vocabulary type: {config["vocabulary"]["type"]}')
 
     datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
+    datamodule.setup("fit")
+
     if ckpt_path is None:
         model = VarNamingModel(config, vocabulary)
     else:
