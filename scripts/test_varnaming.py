@@ -5,7 +5,9 @@ import wandb
 import yaml
 from pytorch_lightning.loggers import WandbLogger
 
-from data_processing.graph_var_miner_dataloader import GraphVarMinerModule
+from data_processing.graph_var_miner.graph_var_miner_dataloader import (
+    GraphVarMinerModule,
+)
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from data_processing.vocabulary.spm_vocabulary import SPMVocabulary
 from models.varnaming import VarNamingModel
