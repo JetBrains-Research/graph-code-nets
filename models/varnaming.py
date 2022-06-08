@@ -118,7 +118,7 @@ class VarNamingModel(pl.LightningModule):
                             dim=1,
                         )
 
-                    generated_batch[b_i:b_i+1, 0, :current.size(1)] = current
+                    generated_batch[b_i : b_i + 1, 0, : current.size(1)] = current
                     generated_batch[b_i, 0, current.size(1)] = self.vocabulary.eos_id()
                 return generated_batch
             elif method == "beam_search":
@@ -205,7 +205,7 @@ class VarNamingModel(pl.LightningModule):
             else:
                 raise ValueError(f"Unknown method: {method}")
 
-    def _shared_step(self, batch: Batch, batch_idx: int, step: str) -> STEP_OUTPUT:
+    def _shared_step(self, batch: Batch, batch_idx: int, step: str) -> tuple[Tensor, Tensor]:
         predicted = self(batch)
         loss = self.loss_fn(
             predicted.reshape(-1, predicted.shape[-1]), batch.name.long().reshape(-1)
@@ -223,9 +223,9 @@ class VarNamingModel(pl.LightningModule):
             prog_bar=True,
             batch_size=batch.num_graphs,
         )
-        return loss
+        return predicted, loss
 
-    def _generate_shared_step(self, batch: Batch, batch_idx: int, step: str):
+    def _generate_step(self, batch: Batch, batch_idx: int, step: str):
         generation_config = self.config[step]["generation"]
 
         method = generation_config["method"]
@@ -243,11 +243,20 @@ class VarNamingModel(pl.LightningModule):
             max_steps=max_steps,
         )  # (batch, top_k, dim)
 
-        dense_batch_name = to_dense_batch(batch.name)[
-            0
-        ].transpose(0, 1)  # (batch, 1, dim)  # 1 because there is only 1 name in sample
+        return generated
 
-        eqs = generated.eq(dense_batch_name)  # (batch, top_k, dim)
+    # target: (batch, top_k, dim)
+    def _log_metrics(self, batch: Batch, target: Tensor, batch_idx: int, step: str):
+        generation_config = self.config[step]["generation"]
+
+        mrr_k = int(generation_config["mrr_k"])
+        acc_k = int(generation_config["acc_k"])
+
+        dense_batch_name = to_dense_batch(batch.name)[0].transpose(
+            0, 1
+        )  # (batch, 1, dim)  # 1 because there is only 1 name in sample
+
+        eqs = target.eq(dense_batch_name)  # (batch, top_k, dim)
 
         acc_token = eqs[:, 0, :].float().mean()  # token wise
 
@@ -258,9 +267,7 @@ class VarNamingModel(pl.LightningModule):
         ranks_mask = (
             exact_eqs[:, :mrr_k].any(dim=1).float()
         )  # (batch)  # if not found, then inv rank is 0
-        arange = torch.arange(
-            mrr_k, 0, -1, device=self.device
-        ).unsqueeze(
+        arange = torch.arange(mrr_k, 0, -1, device=self.device).unsqueeze(
             0
         )  # (batch, mrr_k)
         ranks = torch.argmax(exact_eqs[:, :mrr_k].float() * arange, dim=1)  # (batch)
@@ -296,14 +303,19 @@ class VarNamingModel(pl.LightningModule):
         )
 
     def training_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        return self._shared_step(batch, batch_idx, "train")
+        _, loss = self._shared_step(batch, batch_idx, "train")
+        return loss
 
     def validation_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        return self._shared_step(batch, batch_idx, "validation")
+        predicted, loss = self._shared_step(batch, batch_idx, "validation")
+        predicted_best = torch.argmax(predicted, dim=2).unsqueeze(1)
+        self._log_metrics(batch, predicted_best, batch_idx, "validation")
+        return loss
 
     def test_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        loss = self._shared_step(batch, batch_idx, "test")
-        self._generate_shared_step(batch, batch_idx, "test")
+        _, loss = self._shared_step(batch, batch_idx, "test")
+        generated = self._generate_step(batch, batch_idx, "test")
+        self._log_metrics(batch, generated, batch_idx, "test")
         return loss
 
     def configure_optimizers(self):
