@@ -11,9 +11,7 @@ from collections import defaultdict
 import ijson
 import numpy as np
 
-from data_processing.vocabulary.spm_vocabulary import (
-    SPMVocabulary,
-)
+from data_processing.vocabulary.spm_vocabulary import SPMVocabulary
 
 counter = 0
 

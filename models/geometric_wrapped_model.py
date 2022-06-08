@@ -1,6 +1,13 @@
 import torch
 import torch.nn.functional as F
-from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn, encoder_rggnn, encoder_gatv2conv
+from models import (
+    two_pointer_fcn,
+    encoder_gru,
+    encoder_ggnn,
+    encoder_gcn,
+    encoder_rggnn,
+    encoder_gatv2conv,
+)
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.data import Data
@@ -26,7 +33,8 @@ class VarMisuseLayer(pl.LightningModule):
         )
 
         self._edge_embedding = torch.nn.Embedding(
-            self._model_config["base"]["num_edge_types"], self._model_config["base"]["edge_attr_dim"]
+            self._model_config["base"]["num_edge_types"],
+            self._model_config["base"]["edge_attr_dim"],
         )
 
         self._positional_encoding = torch.nn.Parameter(
@@ -64,13 +72,17 @@ class VarMisuseLayer(pl.LightningModule):
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gatv2conv"]["num_layers"],
-                self._model_config["base"]["edge_attr_dim"]
+                self._model_config["base"]["edge_attr_dim"],
             )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
     def forward(  # type: ignore[override]
-        self, tokens: torch.Tensor, edges: torch.Tensor, edge_attr: torch.Tensor, batch_size: int
+        self,
+        tokens: torch.Tensor,
+        edges: torch.Tensor,
+        edge_attr: torch.Tensor,
+        batch_size: int,
     ) -> torch.Tensor:
         subtoken_embeddings = self._embedding(tokens) * torch.unsqueeze(
             torch.clamp(tokens, 0, 1), -1

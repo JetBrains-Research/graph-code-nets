@@ -137,8 +137,7 @@ class GraphVarMinerDataset(Dataset):
             map(
                 lambda x: list(np.pad(x, (0, self._max_token_len - len(x)))),
                 map(
-                    lambda x: self._vocabulary.encode(x)[: self._max_token_len],
-                    tokens,
+                    lambda x: self._vocabulary.encode(x)[: self._max_token_len], tokens,
                 ),
             )
         )
