@@ -156,7 +156,9 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         )
 
     def _process_tokens(self, tokens: list) -> torch.Tensor:
-        out_tensor = np.zeros((len(tokens), self._max_token_len), dtype=int)  # SUPER IMPORTANT TODO: fix with pad_id
+        out_tensor = np.zeros(
+            (len(tokens), self._max_token_len), dtype=int
+        )  # SUPER IMPORTANT TODO: fix with pad_id
         for i, token in enumerate(tokens):
             if self._preprocessed:
                 enc = token

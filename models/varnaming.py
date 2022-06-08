@@ -205,7 +205,9 @@ class VarNamingModel(pl.LightningModule):
             else:
                 raise ValueError(f"Unknown method: {method}")
 
-    def _shared_step(self, batch: Batch, batch_idx: int, step: str) -> tuple[Tensor, Tensor]:
+    def _shared_step(
+        self, batch: Batch, batch_idx: int, step: str
+    ) -> tuple[Tensor, Tensor]:
         predicted = self(batch)
         loss = self.loss_fn(
             predicted.reshape(-1, predicted.shape[-1]), batch.name.long().reshape(-1)
