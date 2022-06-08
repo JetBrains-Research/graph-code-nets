@@ -42,7 +42,7 @@ def main():
         raise ValueError(f'Unknown vocabulary type: {config["vocabulary"]["type"]}')
 
     datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
-    model = VarNamingModel.load_from_checkpoint(checkpoint_path=ckpt_path)
+    model = VarNamingModel.load_from_checkpoint(checkpoint_path=ckpt_path, config=config, vocabulary=vocabulary)
 
     trainer = pl.Trainer(logger=logger)
 
