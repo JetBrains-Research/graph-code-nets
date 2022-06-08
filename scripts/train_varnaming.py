@@ -24,9 +24,7 @@ def main():
     if len(sys.argv) == 2:
         ckpt_path = sys.argv[1]
 
-    config_path = (
-        "config_varnaming.yaml"
-    )
+    config_path = "config_varnaming.yaml"
 
     with open(config_path) as f:
         config = yaml.safe_load(f)
