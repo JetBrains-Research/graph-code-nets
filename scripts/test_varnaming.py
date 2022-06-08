@@ -19,9 +19,9 @@ def main():
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    wandb.save(config_path, policy="now")
-
     logger = WandbLogger(**config["logger"])
+
+    wandb.save(config_path, policy="now")
 
     trainer = pl.Trainer(logger=logger)
 
