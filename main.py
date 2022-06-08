@@ -3,7 +3,7 @@ from data_processing import graph_data_loader, graph_dataset
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 
 data_path = "data"
-config_path = "config.yml"
+config_path = "config_var_misuse.yml"
 vocabulary_path = "vocab.txt"
 
 mode = "test"

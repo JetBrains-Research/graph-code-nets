@@ -1,14 +1,12 @@
-import os
-
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
-
-from data_processing.graph_dataset import GraphDataset
-from data_processing.vocabulary.vocabulary import Vocabulary
+import os
+from data_processing.graph_var_misuse.geometric_graph_dataset import GraphDataset
+from data_processing.vocabulary.great_vocabulary import GreatVocabulary
+from torch_geometric.loader import DataLoader
 
 
 class GraphDataModule(pl.LightningDataModule):
-    def __init__(self, data_path: str, vocabulary: Vocabulary, config: dict):
+    def __init__(self, data_path: str, vocabulary: GreatVocabulary, config: dict):
         super().__init__()
         self._data_path = os.path.join(data_path)
         self._vocabulary = vocabulary
@@ -20,19 +18,19 @@ class GraphDataModule(pl.LightningDataModule):
     def prepare_data(self):
         pass
 
-    def setup(self, stage: str = None):
+    def setup(self, stage: str = None) -> None:
         if stage == "fit" or stage is None:
             self._train = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev",
+                mode="processed_train",
             )
             self._val = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="dev",
+                mode="processed_dev",
             )
 
         if stage == "test" or stage is None:
@@ -40,15 +38,20 @@ class GraphDataModule(pl.LightningDataModule):
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="eval",
+                mode="processed_eval",
             )
 
-    # it doesn't support batching right now, because of dataset ;(
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self._train, batch_size=1)
+        return DataLoader(
+            self._train, batch_size=self._config["data"]["batch_size"], num_workers=8,
+        )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self._val, batch_size=1)
+        return DataLoader(
+            self._val, batch_size=self._config["data"]["batch_size"], num_workers=8,
+        )
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self._test, batch_size=1)
+        return DataLoader(
+            self._test, batch_size=self._config["data"]["batch_size"], num_workers=8,
+        )
