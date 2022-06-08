@@ -64,7 +64,7 @@ def main():
     )
 
     trainer = pl.Trainer(
-        **config["trainer"], callbacks=[checkpoint_callback], logger=logger
+        **config["trainer"], callbacks=[checkpoint_callback] if ckpt_path is None else None, logger=logger
     )
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
