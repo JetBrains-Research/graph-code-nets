@@ -14,12 +14,15 @@ from data_processing.vocabulary.vocabulary import Vocabulary
 
 class GraphVarMinerModule(pl.LightningDataModule):
     def __init__(
-        self, config: dict, vocabulary: Vocabulary, logger: LightningLoggerBase = None
+        self,
+        config: dict,
+        vocabulary: Vocabulary,
+        logger: Optional[LightningLoggerBase] = None,
     ):
         super().__init__()
         self._config = config
         self._vocabulary = vocabulary
-        self._logger: LightningLoggerBase = logger
+        self._logger: Optional[LightningLoggerBase] = logger
         self._train: Optional[Dataset[Any]] = None
         self._validation: Optional[Dataset[Any]] = None
         self._test: Optional[Dataset[Any]] = None

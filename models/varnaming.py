@@ -74,7 +74,7 @@ class VarNamingModel(pl.LightningModule):
 
     @torch.no_grad()
     def generate(
-            self, batch: Batch, method="beam_search", bandwidth=10, top_k=1, max_steps=5000
+        self, batch: Batch, method="beam_search", bandwidth=10, top_k=1, max_steps=5000
     ):  # batch without `name` attribute
         varname_batch: torch.Tensor = self.encoder(batch)
 
@@ -83,13 +83,15 @@ class VarNamingModel(pl.LightningModule):
                 generated = []
                 for b_i in range(varname_batch.size(0)):
                     varname_batch_part = varname_batch[
-                                         b_i: b_i + 1, :
-                                         ]  # keep batch dimension
+                        b_i : b_i + 1, :
+                    ]  # keep batch dimension
 
-                    current = torch.ones((1, 1)).fill_(self.vocabulary.bos_id())
+                    current = torch.ones((1, 1), device=self.device).fill_(
+                        self.vocabulary.bos_id()
+                    )
 
                     for i in range(
-                            self.max_token_length - 2
+                        self.max_token_length - 2
                     ):  # bos + variable name + eos
                         target_mask = Transformer.generate_square_subsequent_mask(
                             current.size(1)
@@ -131,15 +133,20 @@ class VarNamingModel(pl.LightningModule):
                     score: float  # negative log probability (0 is the best, inf is the worst)
                     state: torch.Tensor = field(compare=False)  # shape: (1, length)
 
-                generated_batch = torch.ones((varname_batch.size(0), top_k, self.max_token_length), dtype=torch.int) \
-                    .fill_(self.vocabulary.pad_id())
+                generated_batch = torch.ones(
+                    (varname_batch.size(0), top_k, self.max_token_length),
+                    dtype=torch.int,
+                    device=self.device,
+                ).fill_(self.vocabulary.pad_id())
                 for b_i in range(varname_batch.size(0)):
                     generated_part_n = 0
                     varname_batch_part = varname_batch[
-                                         b_i: b_i + 1, :
-                                         ]  # keep batch dimension
+                        b_i : b_i + 1, :
+                    ]  # keep batch dimension
 
-                    current_state = torch.ones((1, 1)).fill_(self.vocabulary.bos_id())
+                    current_state = torch.ones((1, 1), device=self.device).fill_(
+                        self.vocabulary.bos_id()
+                    )
 
                     steps = 0
                     pq: list[BeamNode] = []
@@ -152,20 +159,24 @@ class VarNamingModel(pl.LightningModule):
                         current_state = node.state
 
                         max_len_reached = (
-                                current_state.size(1) >= self.max_token_length - 1
+                            current_state.size(1) >= self.max_token_length - 1
                         )
                         eos_reached = (
-                                current_state[:, -1].item() == self.vocabulary.eos_id()
+                            current_state[:, -1].item() == self.vocabulary.eos_id()
                         )
                         max_steps_reached = steps > max_steps
 
                         if max_len_reached or eos_reached or max_steps_reached:
                             # padding is added automatically (generated_batch is filled with pad_id)
-                            generated_batch[b_i:b_i + 1, generated_part_n, :current_state.size(1)] = current_state
+                            generated_batch[
+                                b_i : b_i + 1, generated_part_n, : current_state.size(1)
+                            ] = current_state
 
                             # If not eos_reached, then we need to add eos to the end
                             if not eos_reached:
-                                generated_batch[b_i, generated_part_n, current_state.size(1)] = self.vocabulary.eos_id()
+                                generated_batch[
+                                    b_i, generated_part_n, current_state.size(1)
+                                ] = self.vocabulary.eos_id()
 
                             generated_part_n += 1
 
@@ -190,7 +201,7 @@ class VarNamingModel(pl.LightningModule):
                         for i in range(top_scores.size(1)):
                             new_score = current_score + top_scores[:, i].item()
                             new_state = torch.cat(
-                                [current_state, top_indices[:, i: i + 1]], dim=1
+                                [current_state, top_indices[:, i : i + 1]], dim=1
                             )
                             heapq.heappush(
                                 pq, BeamNode(score=new_score, state=new_state)
@@ -229,13 +240,17 @@ class VarNamingModel(pl.LightningModule):
         acc_k = int(generation_config["acc_k"])
         max_generate_k = max(mrr_k, acc_k)
 
-        generated = self.generate(batch,
-                                  method=method,
-                                  bandwidth=bandwidth,
-                                  top_k=max_generate_k,
-                                  max_steps=max_steps)  # (batch, top_k, dim)
+        generated = self.generate(
+            batch,
+            method=method,
+            bandwidth=bandwidth,
+            top_k=max_generate_k,
+            max_steps=max_steps,
+        )  # (batch, top_k, dim)
 
-        dense_batch_name = to_dense_batch(batch.name)[0]  # (batch, 1, dim)  # 1 because there is only 1 name in sample
+        dense_batch_name = to_dense_batch(batch.name)[
+            0
+        ]  # (batch, 1, dim)  # 1 because there is only 1 name in sample
 
         eqs = generated.eq(dense_batch_name)  # (batch, top_k, dim)
 
@@ -245,35 +260,45 @@ class VarNamingModel(pl.LightningModule):
         acc_exact_1 = exact_eqs[0].float().mean()  # exact name
         acc_exact_k = exact_eqs[:acc_k].any(dim=1).float().mean()  # exact name
 
-        ranks_mask = exact_eqs[:, :mrr_k].any(dim=1).float()  # (batch)  # if not found, then inv rank is 0
-        arange = torch.arange(generated.size(mrr_k, 0, -1)).unsqueeze(0)  # (batch, mrr_k)
+        ranks_mask = (
+            exact_eqs[:, :mrr_k].any(dim=1).float()
+        )  # (batch)  # if not found, then inv rank is 0
+        arange = torch.arange(
+            generated.size(mrr_k, 0, -1), device=self.device
+        ).unsqueeze(
+            0
+        )  # (batch, mrr_k)
         ranks = torch.argmax(exact_eqs[:, :mrr_k].float() * arange, dim=1)  # (batch)
         mrr_exact_k = torch.mean(1 / (ranks + 1) * ranks_mask)
 
-        self.log("accuracy_token",
-                 acc_token,
-                 prog_bar=True,
-                 on_epoch=True,
-                 batch_size=batch.num_graphs,
-                 )
-        self.log(f"accuracy_exact_top{1}",
-                 acc_exact_1,
-                 prog_bar=True,
-                 on_epoch=True,
-                 batch_size=batch.num_graphs,
-                 )
-        self.log(f"accuracy_exact_top{acc_k}",
-                 acc_exact_k,
-                 prog_bar=True,
-                 on_epoch=True,
-                 batch_size=batch.num_graphs,
-                 )
-        self.log(f"mrr_exact_top{mrr_k}",
-                 mrr_exact_k,
-                 prog_bar=True,
-                 on_epoch=True,
-                 batch_size=batch.num_graphs,
-                 )
+        self.log(
+            "accuracy_token",
+            acc_token,
+            prog_bar=True,
+            on_epoch=True,
+            batch_size=batch.num_graphs,
+        )
+        self.log(
+            f"accuracy_exact_top{1}",
+            acc_exact_1,
+            prog_bar=True,
+            on_epoch=True,
+            batch_size=batch.num_graphs,
+        )
+        self.log(
+            f"accuracy_exact_top{acc_k}",
+            acc_exact_k,
+            prog_bar=True,
+            on_epoch=True,
+            batch_size=batch.num_graphs,
+        )
+        self.log(
+            f"mrr_exact_top{mrr_k}",
+            mrr_exact_k,
+            prog_bar=True,
+            on_epoch=True,
+            batch_size=batch.num_graphs,
+        )
 
     def training_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
         return self._shared_step(batch, batch_idx, "train")
