@@ -1,4 +1,5 @@
 import datetime
+import sys
 import time
 
 import pytorch_lightning as pl
@@ -16,6 +17,10 @@ import wandb
 
 
 def main():
+    ckpt_path = None
+    if len(sys.argv) == 2:
+        ckpt_path = sys.argv[1]
+
     config_path = (
         "config_varnaming.yaml"
     )
@@ -41,7 +46,12 @@ def main():
         raise ValueError(f'Unknown vocabulary type: {config["vocabulary"]["type"]}')
 
     datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
-    model = VarNamingModel(config, vocabulary)
+    if ckpt_path is None:
+        model = VarNamingModel(config, vocabulary)
+    else:
+        model = VarNamingModel.load_from_checkpoint(
+            checkpoint_path=ckpt_path, config=config, vocabulary=vocabulary
+        )
 
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime(
         "%y.%m.%d_%H:%M:%S"
@@ -56,7 +66,7 @@ def main():
     trainer = pl.Trainer(
         **config["trainer"], callbacks=[checkpoint_callback], logger=logger
     )
-    trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
     print("Best model: ", checkpoint_callback.best_model_path)
     print(f"Top {checkpoint_callback.save_top_k}: {checkpoint_callback.best_k_models}")

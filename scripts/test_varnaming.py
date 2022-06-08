@@ -12,10 +12,14 @@ from models.varnaming import VarNamingModel
 
 
 def main():
-    if len(sys.argv) < 2:
-        raise ValueError("Expecting ckpt_path")
+    if len(sys.argv) < 3:
+        raise ValueError("Expecting test/validate and ckpt_path")
 
-    ckpt_path = sys.argv[1]
+    test_or_validation = sys.argv[1]
+    if test_or_validation not in ["test", "validation"]:
+        raise ValueError(f"Unexpected test_or_validate: {test_or_validation}")
+
+    ckpt_path = sys.argv[2]
 
     config_path = (
         "config_varnaming.yaml"
@@ -42,13 +46,16 @@ def main():
         raise ValueError(f'Unknown vocabulary type: {config["vocabulary"]["type"]}')
 
     datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
-    model = VarNamingModel.load_from_checkpoint(checkpoint_path=ckpt_path, config=config, vocabulary=vocabulary)
-
-    trainer = pl.Trainer(
-        **config["trainer"], logger=logger
+    model = VarNamingModel.load_from_checkpoint(
+        checkpoint_path=ckpt_path, config=config, vocabulary=vocabulary
     )
 
-    trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+    trainer = pl.Trainer(**config["trainer"], logger=logger)
+
+    if test_or_validation == "test":
+        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+    else:
+        trainer.validate(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
 
 
 if __name__ == "__main__":
