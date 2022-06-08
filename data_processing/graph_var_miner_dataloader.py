@@ -14,7 +14,7 @@ from data_processing.vocabulary.vocabulary import Vocabulary
 
 class GraphVarMinerModule(pl.LightningDataModule):
     def __init__(
-        self, config: dict, vocabulary: Vocabulary, logger: LightningLoggerBase
+        self, config: dict, vocabulary: Vocabulary, logger: LightningLoggerBase = None
     ):
         super().__init__()
         self._config = config

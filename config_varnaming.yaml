@@ -63,6 +63,14 @@ validation:
     pin_memory: True
     persistent_workers: True
 
+  generation:
+    method: "beam_search"
+    gen_check_interval: 9600
+    bandwidth: 10
+    max_steps: 5000
+    mrr_k: 10
+    acc_k: 10
+
 test:
   dataset:
     debug: False
@@ -72,3 +80,11 @@ test:
     num_workers: 4
     pin_memory: True
     persistent_workers: True
+
+  generation:
+    method: "beam_search"
+    gen_check_interval: 9600
+    bandwidth: 10
+    max_steps: 5000
+    mrr_k: 10
+    acc_k: 10
