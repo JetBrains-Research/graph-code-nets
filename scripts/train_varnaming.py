@@ -1,4 +1,5 @@
 import datetime
+import os.path
 import sys
 import time
 
@@ -53,10 +54,13 @@ def main():
             checkpoint_path=ckpt_path, config=config, vocabulary=vocabulary
         )
 
-    timestamp = datetime.datetime.fromtimestamp(time.time()).strftime(
-        "%y.%m.%d_%H:%M:%S"
-    )
-    checkpoint_dirpath = f'{config["checkpoint"]["dir"]}/{timestamp}'
+    if ckpt_path is None:
+        timestamp = datetime.datetime.fromtimestamp(time.time()).strftime(
+            "%y.%m.%d_%H:%M:%S"
+        )
+        checkpoint_dirpath = f'{config["checkpoint"]["dir"]}/{timestamp}'
+    else:
+        checkpoint_dirpath = os.path.dirname(ckpt_path)
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_dirpath,
         save_top_k=int(config["checkpoint"]["top_k"]),
@@ -64,7 +68,7 @@ def main():
     )
 
     trainer = pl.Trainer(
-        **config["trainer"], callbacks=[checkpoint_callback] if ckpt_path is None else None, logger=logger
+        **config["trainer"], callbacks=[checkpoint_callback], logger=logger
     )
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
