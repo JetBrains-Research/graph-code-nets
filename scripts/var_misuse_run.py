@@ -1,10 +1,18 @@
+import torch
+import numpy as np
+import random
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 from models.geometric_wrapped_model import VarMisuseLayer
 import yaml
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from data_processing.graph_var_misuse import geometric_graph_data_loader
 from pytorch_lightning.loggers import WandbLogger
 import argparse
+
+torch.manual_seed(0)
+np.random.seed(0)
+random.seed(0)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("config_path")
@@ -23,6 +31,8 @@ data.setup("fit")
 model = VarMisuseLayer(config, vocab.vocab_dim)
 
 wandb_logger = WandbLogger(project="graph-nets-test")
+checkpoint_callback = ModelCheckpoint(dirpath='checkpoint/varmisuse/')
+
 trainer = pl.Trainer(
     accelerator="gpu",
     devices=1,
@@ -30,6 +40,7 @@ trainer = pl.Trainer(
     val_check_interval=0.2,
     logger=wandb_logger,
     accumulate_grad_batches=2,
+    callbacks=[checkpoint_callback]
 )
 trainer.fit(
     model=model,
