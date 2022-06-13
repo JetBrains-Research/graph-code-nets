@@ -93,7 +93,7 @@ class VarMisuseLayer(pl.LightningModule):
         states += positional_encoding_addition
 
         predictions: torch.Tensor
-        if self._model_config["configuration"] == "gatv2conv":
+        if self._model_config[self._model_config["configuration"]]["typed_edges"]:
             predictions = self._model(states, edges, edge_embeddings.float())
         else:
             predictions = self._model(states, edges)

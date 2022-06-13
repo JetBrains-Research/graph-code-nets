@@ -3,7 +3,7 @@ paths:
   raw_data: "../data"
   vocab: "../vocab.txt"
 model:
-  configuration: "ggnn"
+  configuration: "gatv2conv"
   base:
     hidden_dim: 128
     dropout_rate: 0.1
@@ -11,14 +11,19 @@ model:
     edge_attr_dim: 32
   rnn:
     num_layers: 8
+    typed_edges: False
   ggnn:
     num_layers: 8
+    typed_edges: False
   gcn:
     num_layers: 8
+    typed_edges: False
   rggnn:
     num_layers: 8
+    typed_edges: False
   gatv2conv:
     num_layers: 8
+    typed_edges: True
 data:
   batch_size: 64 # In samples
   max_sequence_length: 128
