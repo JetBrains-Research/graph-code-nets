@@ -3,7 +3,7 @@ paths:
   raw_data: "../data"
   vocab: "../vocab.txt"
 model:
-  configuration: "gatv2conv"
+  configuration: "ggnn"
   base:
     hidden_dim: 128
     dropout_rate: 0.1
@@ -22,6 +22,9 @@ model:
     num_layers: 8
     typed_edges: False
   gatv2conv:
+    num_layers: 8
+    typed_edges: True
+  myggnn:
     num_layers: 8
     typed_edges: True
 data:

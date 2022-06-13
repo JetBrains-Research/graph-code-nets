@@ -31,7 +31,7 @@ data.setup("fit")
 model = VarMisuseLayer(config, vocab.vocab_dim)
 
 wandb_logger = WandbLogger(project="graph-nets-test")
-checkpoint_callback = ModelCheckpoint(dirpath='checkpoint/varmisuse/')
+checkpoint_callback = ModelCheckpoint(dirpath="checkpoint/varmisuse/")
 
 trainer = pl.Trainer(
     accelerator="gpu",
@@ -40,7 +40,7 @@ trainer = pl.Trainer(
     val_check_interval=0.2,
     logger=wandb_logger,
     accumulate_grad_batches=2,
-    callbacks=[checkpoint_callback]
+    callbacks=[checkpoint_callback],
 )
 trainer.fit(
     model=model,

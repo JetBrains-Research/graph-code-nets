@@ -7,6 +7,7 @@ from models import (
     encoder_gcn,
     encoder_rggnn,
     encoder_gatv2conv,
+    encoder_myggnn
 )
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
@@ -74,6 +75,10 @@ class VarMisuseLayer(pl.LightningModule):
                 self._model_config["gatv2conv"]["num_layers"],
                 self._model_config["base"]["edge_attr_dim"],
             )
+        elif inner_model == "myggnn":
+            self._model = encoder_myggnn.EncoderMyGGNN(
+                join_dicts(base_config, self._model_config["ggnn"])
+            )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
@@ -94,7 +99,7 @@ class VarMisuseLayer(pl.LightningModule):
 
         predictions: torch.Tensor
         if self._model_config[self._model_config["configuration"]]["typed_edges"]:
-            predictions = self._model(states, edges, edge_embeddings.float())
+            predictions = self._model(states, edges, edge_attr=edge_embeddings.float())
         else:
             predictions = self._model(states, edges)
 
