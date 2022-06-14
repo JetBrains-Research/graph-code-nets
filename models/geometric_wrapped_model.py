@@ -7,7 +7,7 @@ from models import (
     encoder_gcn,
     encoder_rggnn,
     encoder_gatv2conv,
-    encoder_myggnn
+    encoder_myggnn,
 )
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch

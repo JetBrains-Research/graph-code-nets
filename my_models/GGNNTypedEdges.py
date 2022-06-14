@@ -13,7 +13,6 @@ from torch_geometric.nn.inits import uniform
 
 
 class MyGatedGraphConv(MessagePassing):
-
     def __init__(
         self,
         out_channels: int,
@@ -47,7 +46,11 @@ class MyGatedGraphConv(MessagePassing):
         self.rnn.reset_parameters()
 
     def forward(
-        self, x: Tensor, edge_index: Adj, edge_weight: OptTensor = None, edge_attr: OptTensor = None
+        self,
+        x: Tensor,
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+        edge_attr: OptTensor = None,
     ) -> Tensor:
         """"""
         if x.size(-1) > self.out_channels:
@@ -63,7 +66,9 @@ class MyGatedGraphConv(MessagePassing):
         for i in range(self.num_layers):
             m = torch.matmul(x, self.weight[i])
             # propagate_type: (x: Tensor, edge_weight: OptTensor)
-            m = self.propagate(edge_index, x=m, edge_weight=edge_weight, edge_attr=edge_attr, size=None)
+            m = self.propagate(
+                edge_index, x=m, edge_weight=edge_weight, edge_attr=edge_attr, size=None
+            )
             x = self.rnn(m, x)
 
         return x

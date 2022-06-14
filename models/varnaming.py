@@ -28,7 +28,8 @@ class VarNamingModel(pl.LightningModule):
         encoder_config = self.config["model"][self.config["model"]["encoder"]]
         if self.config["model"]["encoder"] == "gcn":
             self.encoder = GCNEncoder(
-                **encoder_config, in_channels=self.max_token_length,
+                **encoder_config,
+                in_channels=self.max_token_length,
             )  # torch_geometric.data.Data -> torch.Tensor [num_nodes, d_model]
         else:
             raise ValueError(f"Unknown encoder type: {self.config['model']['encoder']}")
