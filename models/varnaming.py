@@ -262,7 +262,7 @@ class VarNamingModel(pl.LightningModule):
 
         chrf = torch.tensor(0.0, device=self.device)
 
-        for input_, target_ in zip(input_t[:, 0], target_t):
+        for input_, target_ in zip(input_t[:, 0], target_t[:, 0]):
             input_dec = self.vocabulary.decode(
                 remove_special_symbols(
                     input_.tolist(),
