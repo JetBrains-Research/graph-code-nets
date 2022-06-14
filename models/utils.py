@@ -7,7 +7,11 @@ def generate_padding_mask(src_or_tgt, pad_id, device):
     return (src_or_tgt == pad_id).to(device)
 
 
-def remove_special_symbols(out: torch.Tensor, spec_symbols) -> list[list[list[int]]]:
+def remove_special_symbols(l: list[int], spec_symbols) -> list[int]:
+    return list(filter(lambda x: x not in spec_symbols, l))
+
+
+def remove_special_symbols_t(out: torch.Tensor, spec_symbols) -> list[list[list[int]]]:
     """
     out shape: (batch_size, top_k, L)
     return: list of batch_size lists, whose length is <= L

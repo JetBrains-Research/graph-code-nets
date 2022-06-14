@@ -16,7 +16,7 @@ from data_processing.identifiersplitting import split_identifier_into_parts
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
-from models.utils import generate_padding_mask
+from models.utils import generate_padding_mask, remove_special_symbols
 
 
 class VarNamingModel(pl.LightningModule):
@@ -256,15 +256,25 @@ class VarNamingModel(pl.LightningModule):
         mrr_k = int(generation_config["mrr_k"])
         acc_k = int(generation_config["acc_k"])
 
-        target_t = to_dense_batch(batch.name)[0].transpose(
-            0, 1
-        )  # (batch, 1, dim)  # 1 because there is only 1 name in sample
+        target_t = (
+            to_dense_batch(batch.name)[0].transpose(0, 1).int()
+        ).int()  # (batch, 1, dim)  # 1 because there is only 1 name in sample
 
         chrf = torch.tensor(0.0, device=self.device)
 
         for input_, target_ in zip(input_t[:, 0], target_t):
-            input_dec = self.vocabulary.decode(input_)
-            target_dec = self.vocabulary.decode(target_)
+            input_dec = self.vocabulary.decode(
+                remove_special_symbols(
+                    input_.tolist(),
+                    [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
+                )
+            )
+            target_dec = self.vocabulary.decode(
+                remove_special_symbols(
+                    target_.tolist(),
+                    [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
+                )
+            )
             input_words = " ".join(split_identifier_into_parts(input_dec))
             target_words = " ".join(split_identifier_into_parts(target_dec))
             chrf += chrf_score([input_words], [target_words])
