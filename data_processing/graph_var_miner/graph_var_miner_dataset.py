@@ -10,7 +10,7 @@ import torch
 from torch_geometric.data import Data, Dataset
 from tqdm import tqdm
 
-from data_processing.vocabulary import Vocabulary
+from data_processing.vocabulary.vocabulary import Vocabulary
 
 _graph_var_miner_edge_types = [
     "NextToken",
@@ -35,25 +35,27 @@ _graph_var_miner_edge_types_to_idx = dict(
 class GraphVarMinerDataset(Dataset):
     def __init__(
         self,
-        root: str,
+        config: dict,
         mode: str,
         vocabulary: Vocabulary,
-        max_token_len: int = 10,
         *,
         transform=None,
         pre_transform=None,
         pre_filter=None,
-        debug=False,
     ):
+        self._config = config
         self._mode = mode
         self._vocabulary = vocabulary
-        self._max_token_len = max_token_len
 
-        self._raw_data_path = pathlib.Path(root, mode)
+        self._root = self._config[self._mode]["dataset"]["root"]
+        self._max_token_len = self._config["vocabulary"]["max_token_length"]
+        self._debug = self._config[self._mode]["dataset"]["debug"]
+
+        self._raw_data_path = pathlib.Path(self._root, mode)
         if not self._raw_data_path.exists():
             raise FileNotFoundError()
 
-        self._proc_data_path = pathlib.Path(root, f"{mode}_processed")
+        self._proc_data_path = pathlib.Path(self._root, f"{mode}_processed")
         self._proc_data_path.mkdir(parents=True, exist_ok=True)
 
         self._proc_cfg_data_path = self._proc_data_path.joinpath("info.json")
@@ -63,9 +65,8 @@ class GraphVarMinerDataset(Dataset):
         self._data_files: list[pathlib.Path] = [
             f for f in self._raw_data_path.iterdir() if f.is_file()
         ]
-        self._debug = debug
 
-        super().__init__(root, transform, pre_transform, pre_filter)
+        super().__init__(self._root, transform, pre_transform, pre_filter)
 
     def _info_cfg(self) -> dict:
         if self.__info_cfg is None:
@@ -105,7 +106,10 @@ class GraphVarMinerDataset(Dataset):
         return self._proc_data_path.joinpath(data_dir_name, rel_item_name)
 
     def _item_from_dict(self, dct) -> Data:
-        tokens = self._process_tokens(dct["ContextGraph"]["NodeLabels"].values())
+        nodes = list(dct["ContextGraph"]["NodeLabels"].values())
+        tokens = self._process_tokens(nodes)
+        marked_tokens = torch.tensor(np.array(nodes) == "<var>", dtype=torch.float)
+
         edge_index = []
         edge_attr = []
         for edges_typed_group in dct["ContextGraph"]["Edges"].items():
@@ -113,18 +117,19 @@ class GraphVarMinerDataset(Dataset):
             edge_index.extend(edges_typed_group[1])
             edge_attr.extend([edges_type] * len(edges_typed_group[1]))
         edge_index_t = torch.tensor(edge_index).t().contiguous()
-        edge_attr_t = torch.tensor(edge_attr)
+        edge_weight_t = torch.tensor(edge_attr, dtype=torch.float)
 
         filename = dct["filename"]
-        name = dct["filename"]
+        name = self._process_tokens([dct["name"]])
         types = self._process_tokens(dct["types"])
         return Data(
             x=tokens,
             edge_index=edge_index_t,
-            edge_attr=edge_attr_t,
+            edge_weight=edge_weight_t,
             filename=filename,
             name=name,
             types=types,
+            marked_tokens=marked_tokens,
         )
 
     def _process_tokens(self, tokens: list) -> torch.Tensor:
@@ -132,7 +137,7 @@ class GraphVarMinerDataset(Dataset):
             map(
                 lambda x: list(np.pad(x, (0, self._max_token_len - len(x)))),
                 map(
-                    lambda x: self._vocabulary.translate(x)[: self._max_token_len],
+                    lambda x: self._vocabulary.encode(x)[: self._max_token_len],
                     tokens,
                 ),
             )

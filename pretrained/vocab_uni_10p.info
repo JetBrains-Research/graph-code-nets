@@ -1,0 +1,4 @@
+Dataset datasets/java_small/validation/
+Model pretrained/vocab_uni_10p.model
+Percentiles: [0.95, 0.99, 0.999, 0.9999, 1.0]
+Max token length: [5, 10, 18, 26, 58]

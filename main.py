@@ -1,6 +1,6 @@
 import yaml
-from data_processing import vocabulary, graph_dataset, graph_data_loader
-
+from data_processing import graph_data_loader, graph_dataset
+from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 
 data_path = "data"
 config_path = "config.yml"
@@ -8,7 +8,7 @@ vocabulary_path = "vocab.txt"
 
 mode = "test"
 config = yaml.safe_load(open(config_path))
-vocab = vocabulary.Vocabulary(vocab_path="vocab.txt")
+vocab = GreatVocabulary(vocab_path="vocab.txt")
 
 dataset = graph_dataset.GraphDataset(data_path, vocab, config, mode, debug=False)
 dl = graph_data_loader.GraphDataModule(data_path, vocab, config)
