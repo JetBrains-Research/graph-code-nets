@@ -262,36 +262,61 @@ class VarNamingModel(pl.LightningModule):
         chrf_metric = CHRF()
 
         chrf = torch.tensor(0.0, device=self.device)
-        for input_, target_ in zip(input_t[:, 0], target_t[:, 0]):
-            input_dec = self.vocabulary.decode(
-                remove_special_symbols(
-                    input_.tolist(),
-                    [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
+        acc_exact_1 = torch.tensor(0.0, device=self.device)
+        acc_exact_k = torch.tensor(0.0, device=self.device)
+        mrr_exact_k = torch.tensor(0.0, device=self.device)
+
+        for b_i in range(input_t.shape[0]):
+            mrr_found = False
+            for top_k_i in range(input_t.shape[1]):
+                input_ = input_t[b_i, top_k_i]
+                target_ = target_t[b_i, top_k_i]
+                input_dec = self.vocabulary.decode(
+                    remove_special_symbols(
+                        input_.tolist(),
+                        [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
+                    )
                 )
-            )
-            target_dec = self.vocabulary.decode(
-                remove_special_symbols(
-                    target_.tolist(),
-                    [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
+                target_dec = self.vocabulary.decode(
+                    remove_special_symbols(
+                        target_.tolist(),
+                        [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
+                    )
                 )
-            )
-            chrf += chrf_metric.sentence_score(input_dec, [target_dec]).score
+                if self.vocabulary.unk_id() in input_ or self.vocabulary.unk_id() in target_:
+                    exact_match = False
+                else:
+                    exact_match = input_dec == target_dec
+                if top_k_i == 0:
+                    chrf += chrf_metric.sentence_score(input_dec, [target_dec]).score
+                    acc_exact_1 += float(exact_match)
+                if top_k_i < mrr_k and not mrr_found and exact_match:
+                    mrr_found = True
+                    mrr_exact_k += 1./(top_k_i + 1)
+                if top_k_i < acc_k:
+                    acc_exact_k += 1./acc_k
+            if not mrr_found:
+                mrr_exact_k += 0.
+
         chrf /= 100.0
         chrf /= input_t.shape[0]
+        acc_exact_1 /= input_t.shape[0]
+        acc_exact_k /= input_t.shape[0]
+        mrr_k /= input_t.shape[0]
 
-        eqs = input_t.eq(target_t)  # (batch, top_k, dim)
-        exact_eqs = eqs.all(dim=2)  # (batch, top_k)
-        acc_exact_1 = exact_eqs[0].float().mean()  # exact name
-        acc_exact_k = exact_eqs[:acc_k].any(dim=1).float().mean()  # exact name
-
-        ranks_mask = (
-            exact_eqs[:, :mrr_k].any(dim=1).float()
-        )  # (batch)  # if not found, then inv rank is 0
-        arange = torch.arange(mrr_k, 0, -1, device=self.device).unsqueeze(
-            0
-        )  # (batch, mrr_k)
-        ranks = torch.argmax(exact_eqs[:, :mrr_k].float() * arange, dim=1)  # (batch)
-        mrr_exact_k = torch.mean(1 / (ranks + 1) * ranks_mask)
+        # eqs = input_t.eq(target_t)  # (batch, top_k, dim)
+        # exact_eqs = eqs.all(dim=2)  # (batch, top_k)
+        # acc_exact_1 = exact_eqs[0].float().mean()  # exact name
+        # acc_exact_k = exact_eqs[:acc_k].any(dim=1).float().mean()  # exact name
+        #
+        # ranks_mask = (
+        #     exact_eqs[:, :mrr_k].any(dim=1).float()
+        # )  # (batch)  # if not found, then inv rank is 0
+        # arange = torch.arange(mrr_k, 0, -1, device=self.device).unsqueeze(
+        #     0
+        # )  # (batch, mrr_k)
+        # ranks = torch.argmax(exact_eqs[:, :mrr_k].float() * arange, dim=1)  # (batch)
+        # mrr_exact_k = torch.mean(1 / (ranks + 1) * ranks_mask)
 
         self.log(
             "chrf",

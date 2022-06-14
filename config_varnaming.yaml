@@ -68,8 +68,8 @@ validation:
     gen_check_interval: 9600
     bandwidth: 10
     max_steps: 5000
-    mrr_k: 10
-    acc_k: 10
+    mrr_k: 5
+    acc_k: 5
 
 test:
   dataset:
@@ -86,5 +86,5 @@ test:
     gen_check_interval: 9600
     bandwidth: 10
     max_steps: 5000
-    mrr_k: 10
-    acc_k: 10
+    mrr_k: 5
+    acc_k: 5
