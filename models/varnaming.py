@@ -6,13 +6,12 @@ import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from pytorch_lightning.utilities.types import STEP_OUTPUT
+from sacrebleu import CHRF
 from torch import Tensor
 from torch.nn import Transformer
 from torch_geometric.data import Batch
 from torch_geometric.utils import to_dense_batch
-from torchmetrics.functional import chrf_score
 
-from data_processing.identifiersplitting import split_identifier_into_parts
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
@@ -260,8 +259,9 @@ class VarNamingModel(pl.LightningModule):
             to_dense_batch(batch.name)[0].transpose(0, 1).int()
         ).int()  # (batch, 1, dim)  # 1 because there is only 1 name in sample
 
-        chrf = torch.tensor(0.0, device=self.device)
+        chrf_metric = CHRF()
 
+        chrf = torch.tensor(0.0, device=self.device)
         for input_, target_ in zip(input_t[:, 0], target_t[:, 0]):
             input_dec = self.vocabulary.decode(
                 remove_special_symbols(
@@ -275,9 +275,8 @@ class VarNamingModel(pl.LightningModule):
                     [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
                 )
             )
-            input_words = " ".join(split_identifier_into_parts(input_dec))
-            target_words = " ".join(split_identifier_into_parts(target_dec))
-            chrf += chrf_score([input_words], [target_words])
+            chrf += chrf_metric.sentence_score(input_dec, [target_dec]).score
+        chrf /= 100.0
         chrf /= input_t.shape[0]
 
         eqs = input_t.eq(target_t)  # (batch, top_k, dim)
