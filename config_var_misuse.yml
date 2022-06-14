@@ -1,0 +1,38 @@
+paths:
+  data: "../data"
+  raw_data: "../data"
+  vocab: "../vocab.txt"
+model:
+  configuration: "ggnn"
+  base:
+    hidden_dim: 128
+    dropout_rate: 0.1
+    num_edge_types: 13
+    edge_attr_dim: 32
+  rnn:
+    num_layers: 8
+    typed_edges: False
+  ggnn:
+    num_layers: 8
+    typed_edges: False
+  gcn:
+    num_layers: 8
+    typed_edges: False
+  rggnn:
+    num_layers: 8
+    typed_edges: False
+  gatv2conv:
+    num_layers: 8
+    typed_edges: True
+  myggnn:
+    num_layers: 8
+    typed_edges: True
+data:
+  batch_size: 64 # In samples
+  max_sequence_length: 128
+  drop_sequence_length: 512
+  max_token_length: 8  # In terms of (BPE) sub-tokens.
+training:
+  max_steps: 100
+  print_freq: 1000
+  learning_rate: 0.0001

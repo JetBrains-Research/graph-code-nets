@@ -1,17 +1,27 @@
-import numpy as np
-import models.utils as util
 import torch
 import torch.nn.functional as F
-from models import two_pointer_fcn, encoder_gru, encoder_ggnn, encoder_gcn
+from models import (
+    two_pointer_fcn,
+    encoder_gru,
+    encoder_ggnn,
+    encoder_gcn,
+    encoder_rggnn,
+    encoder_gatv2conv,
+    encoder_myggnn
+)
 import pytorch_lightning as pl
+from torch_geometric.utils import to_dense_batch
+from torch_geometric.data import Data
 from models.utils import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
+    join_dicts,
+    positional_encoding,
 )
 
 
 class VarMisuseLayer(pl.LightningModule):
-    def __init__(self, config: dict, vocab_dim: int):  # type: ignore[override]
+    def __init__(self, config: dict, vocab_dim: int):
         super().__init__()
         self._model_config = config["model"]
         self._data_config = config["data"]
@@ -23,75 +33,101 @@ class VarMisuseLayer(pl.LightningModule):
             self._vocab_dim, self._model_config["base"]["hidden_dim"]
         )
 
+        self._edge_embedding = torch.nn.Embedding(
+            self._model_config["base"]["num_edge_types"],
+            self._model_config["base"]["edge_attr_dim"],
+        )
+
+        self._positional_encoding = torch.nn.Parameter(
+            positional_encoding(
+                self._model_config["base"]["hidden_dim"],
+                self._data_config["max_sequence_length"],
+            )
+        )
+
         base_config = self._model_config["base"]
         inner_model = self._model_config["configuration"]
         self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
         if inner_model == "rnn":
             self._model = encoder_gru.EncoderGRU(
-                util.join_dicts(base_config, self._model_config["rnn"])
+                join_dicts(base_config, self._model_config["rnn"])
             )
         elif inner_model == "ggnn":
             self._model = encoder_ggnn.EncoderGGNN(
-                util.join_dicts(base_config, self._model_config["ggnn"])
+                join_dicts(base_config, self._model_config["ggnn"])
             )
         elif inner_model == "gcn":
-            self._model = encoder_gcn.EncoderGCN(base_config)
+            self._model = encoder_gcn.GCNEncoder(
+                -1,
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["gcn"]["num_layers"],
+            )
+        elif inner_model == "rggnn":
+            self._model = encoder_rggnn.RGGNNEncoder(
+                -1,
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["rggnn"]["num_layers"],
+            )
+        elif inner_model == "gatv2conv":
+            self._model = encoder_gatv2conv.GATv2ConvEncoder(
+                -1,
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["gatv2conv"]["num_layers"],
+                self._model_config["base"]["edge_attr_dim"],
+            )
+        elif inner_model == "myggnn":
+            self._model = encoder_myggnn.EncoderMyGGNN(
+                join_dicts(base_config, self._model_config["ggnn"])
+            )
         else:
             raise ValueError("Unknown model component provided:", inner_model)
 
     def forward(  # type: ignore[override]
-        self, tokens: torch.Tensor, token_mask: torch.Tensor, edges: torch.Tensor
+        self,
+        tokens: torch.Tensor,
+        edges: torch.Tensor,
+        edge_attr: torch.Tensor,
+        batch_size: int,
     ) -> torch.Tensor:
-        original_shape = list(
-            np.append(np.array(tokens.shape), self._model_config["base"]["hidden_dim"])
+        subtoken_embeddings = self._embedding(tokens) * torch.unsqueeze(
+            torch.clamp(tokens, 0, 1), -1
         )
-        flat_tokens = tokens.type(torch.long).flatten().to(self._device)
-        subtoken_embeddings = self._embedding(flat_tokens)
-        subtoken_embeddings = torch.reshape(subtoken_embeddings, original_shape)
-        subtoken_embeddings *= torch.unsqueeze(torch.clamp(tokens, 0, 1), -1).to(
-            self._device
-        )
-        states = torch.mean(subtoken_embeddings, 2)
-        if self._model_config["configuration"] == "rnn":
-            predictions = torch.transpose(
-                self._prediction(self._model(states)[0]), 1, 2
-            )
-            return predictions
+        edge_embeddings = self._edge_embedding(edge_attr)
+        states = torch.mean(subtoken_embeddings, 1)
+        positional_encoding_addition = self._positional_encoding.repeat(batch_size, 1)
+        states += positional_encoding_addition
 
-        elif self._model_config["configuration"] == "ggnn":
-            predictions = list()
-            for i in range(len(tokens)):
-                test_predictions = self._model(
-                    states[i].float(),
-                    torch.tensor(
-                        [
-                            [e[2] for e in edges if e[1] == i],
-                            [e[3] for e in edges if e[1] == i],
-                        ]
-                    ).to(self._device),
-                )
-                predictions.append(test_predictions)
-            predictions = torch.stack(predictions).to(self._device)
-            predictions = torch.transpose(self._prediction(predictions), 1, 2)
-            return predictions
+        predictions: torch.Tensor
+        if self._model_config[self._model_config["configuration"]]["typed_edges"]:
+            predictions = self._model(states, edges, edge_attr=edge_embeddings.float())
+        else:
+            predictions = self._model(states, edges)
 
-    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        return self._shared_eval_step(batch, batch_idx, "train_small")
+        return self._prediction(predictions)
 
-    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
+    def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
+        return self._shared_eval_step(batch, batch_idx, "train")
+
+    def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "val")
 
-    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
+    def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "test")
 
-    def _shared_eval_step(
-        self, batch: torch.Tensor, batch_idx: int, step: str
-    ) -> torch.Tensor:
-        tokens, edges, error_loc, repair_targets, repair_candidates = batch
-        token_mask = torch.clamp(torch.sum(tokens, -1), 0, 1)
-        pointer_preds = self(tokens, token_mask, edges)
+    def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
+        batch_size = int(batch.batch[-1] + 1)
+        pointer_preds = self(batch.x, batch.edge_index, batch.edge_attr, batch_size)
+        pointer_preds_t = to_dense_batch(pointer_preds, batch.batch)[0]
+        pointer_preds_t = torch.transpose(pointer_preds_t, 1, 2)
+        token_mask = torch.clamp(torch.sum(batch.x, -1), 0, 1)
+        token_mask = to_dense_batch(token_mask, batch.batch)[0]
+        labels_t = to_dense_batch(batch.y, batch.batch)[0]
+        error_loc = torch.nonzero(labels_t[:, :, 0])[:, 1]
+        repair_targets = torch.nonzero(labels_t[:, :, 1])
+        repair_candidates = torch.nonzero(labels_t[:, :, 2])
+
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
-            pointer_preds, token_mask, error_loc, repair_targets, repair_candidates
+            pointer_preds_t, token_mask, error_loc, repair_targets, repair_candidates
         )
         losses = self.test_get_losses(
             is_buggy, loc_predictions, target_probs, error_loc
