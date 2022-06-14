@@ -10,7 +10,9 @@ from torch import Tensor
 from torch.nn import Transformer
 from torch_geometric.data import Batch
 from torch_geometric.utils import to_dense_batch
+from torchmetrics.functional import chrf_score
 
+from data_processing.identifiersplitting import split_identifier_into_parts
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
@@ -247,21 +249,28 @@ class VarNamingModel(pl.LightningModule):
 
         return generated
 
-    # target: (batch, top_k, dim)
-    def _log_metrics(self, batch: Batch, target: Tensor, batch_idx: int, step: str):
+    # input_t: (batch, top_k, dim)
+    def _log_metrics(self, batch: Batch, input_t: Tensor, batch_idx: int, step: str):
         generation_config = self.config[step]["generation"]
 
         mrr_k = int(generation_config["mrr_k"])
         acc_k = int(generation_config["acc_k"])
 
-        dense_batch_name = to_dense_batch(batch.name)[0].transpose(
+        target_t = to_dense_batch(batch.name)[0].transpose(
             0, 1
         )  # (batch, 1, dim)  # 1 because there is only 1 name in sample
 
-        eqs = target.eq(dense_batch_name)  # (batch, top_k, dim)
+        chrf = torch.tensor(0.0, device=self.device)
 
-        acc_token = eqs[:, 0, :].float().mean()  # token wise
+        for input_, target_ in zip(input_t[:, 0], target_t):
+            input_dec = self.vocabulary.decode(input_)
+            target_dec = self.vocabulary.decode(target_)
+            input_words = " ".join(split_identifier_into_parts(input_dec))
+            target_words = " ".join(split_identifier_into_parts(target_dec))
+            chrf += chrf_score([input_words], [target_words])
+        chrf /= input_t.shape[0]
 
+        eqs = input_t.eq(target_t)  # (batch, top_k, dim)
         exact_eqs = eqs.all(dim=2)  # (batch, top_k)
         acc_exact_1 = exact_eqs[0].float().mean()  # exact name
         acc_exact_k = exact_eqs[:acc_k].any(dim=1).float().mean()  # exact name
@@ -276,8 +285,8 @@ class VarNamingModel(pl.LightningModule):
         mrr_exact_k = torch.mean(1 / (ranks + 1) * ranks_mask)
 
         self.log(
-            "accuracy_token",
-            acc_token,
+            "chrf",
+            chrf,
             prog_bar=True,
             on_epoch=True,
             batch_size=batch.num_graphs,
