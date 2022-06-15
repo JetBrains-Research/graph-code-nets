@@ -271,32 +271,30 @@ class VarNamingModel(pl.LightningModule):
             for top_k_i in range(input_t.shape[1]):
                 input_ = input_t[b_i, top_k_i]
                 target_ = target_t[b_i, top_k_i]
-                input_dec = self.vocabulary.decode(
-                    remove_special_symbols(
-                        input_.tolist(),
-                        [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
-                    )
-                )
-                target_dec = self.vocabulary.decode(
-                    remove_special_symbols(
-                        target_.tolist(),
-                        [self.vocabulary.pad_id(), self.vocabulary.unk_id()],
-                    )
-                )
-                if self.vocabulary.unk_id() in input_ or self.vocabulary.unk_id() in target_:
+                input_dec = self.vocabulary.decode(input_.tolist())
+                target_dec = self.vocabulary.decode(target_.tolist())
+                if (
+                    self.vocabulary.unk_id() in input_
+                    or self.vocabulary.unk_id() in target_
+                ):
                     exact_match = False
                 else:
                     exact_match = input_dec == target_dec
                 if top_k_i == 0:
-                    chrf += chrf_metric.sentence_score(input_dec, [target_dec]).score
+                    if target_dec != "":
+                        chrf += chrf_metric.sentence_score(
+                            input_dec, [target_dec]
+                        ).score
+                    else:
+                        chrf += 0.0  # just for clarity
                     acc_exact_1 += float(exact_match)
                 if top_k_i < mrr_k and not mrr_found and exact_match:
                     mrr_found = True
-                    mrr_exact_k += 1./(top_k_i + 1)
+                    mrr_exact_k += 1.0 / (top_k_i + 1)
                 if top_k_i < acc_k:
-                    acc_exact_k += 1./acc_k
+                    acc_exact_k += 1.0 / acc_k
             if not mrr_found:
-                mrr_exact_k += 0.
+                mrr_exact_k += 0.0  # just for clarity
 
         chrf /= 100.0
         chrf /= input_t.shape[0]

@@ -73,7 +73,7 @@ class GraphTransformerDecoder(pl.LightningModule):
         memory_key_padding_mask: Optional[
             Tensor
         ] = None,  # shape: [batch_size, source_size]
-    ) -> Tensor:
+    ) -> Tensor:  # shape: [batch size, src_seq_length, target vocabulary dim]
         return self.generator(
             self.decoder(
                 tgt=self.positional_encoding(self.tgt_tok_emb(tgt)),
