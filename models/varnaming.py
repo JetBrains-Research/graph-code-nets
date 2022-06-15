@@ -302,21 +302,7 @@ class VarNamingModel(pl.LightningModule):
         chrf /= input_t.shape[0]
         acc_exact_1 /= input_t.shape[0]
         acc_exact_k /= input_t.shape[0]
-        mrr_k /= input_t.shape[0]
-
-        # eqs = input_t.eq(target_t)  # (batch, top_k, dim)
-        # exact_eqs = eqs.all(dim=2)  # (batch, top_k)
-        # acc_exact_1 = exact_eqs[0].float().mean()  # exact name
-        # acc_exact_k = exact_eqs[:acc_k].any(dim=1).float().mean()  # exact name
-        #
-        # ranks_mask = (
-        #     exact_eqs[:, :mrr_k].any(dim=1).float()
-        # )  # (batch)  # if not found, then inv rank is 0
-        # arange = torch.arange(mrr_k, 0, -1, device=self.device).unsqueeze(
-        #     0
-        # )  # (batch, mrr_k)
-        # ranks = torch.argmax(exact_eqs[:, :mrr_k].float() * arange, dim=1)  # (batch)
-        # mrr_exact_k = torch.mean(1 / (ranks + 1) * ranks_mask)
+        mrr_exact_k /= input_t.shape[0]
 
         self.log(
             "chrf",

@@ -20,6 +20,7 @@ class SPMVocabularyTrainer:
         fraction_prob=0.1,
         seed=1337,
         num_threads=4,
+        **kwargs
     ):
         self._root = root
         self._vocab_size = vocab_size
@@ -30,6 +31,7 @@ class SPMVocabularyTrainer:
         )
         self._seed = seed
         self._num_threads = 4
+        self._kwargs = kwargs
 
         _raw_data_path = pathlib.Path(self._root)
         if not _raw_data_path.exists():
@@ -61,6 +63,7 @@ class SPMVocabularyTrainer:
             add_dummy_prefix=False,  # in GraphVarMiner dataset no whitespaces exist,
             # and words should be generated in camel case, so dummy whitespace is redundant
             num_threads=self._num_threads,
+            **self._kwargs
         )
 
 

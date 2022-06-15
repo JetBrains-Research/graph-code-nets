@@ -37,6 +37,22 @@ def main():
 
     parser.add_argument("num_threads", default=4, help="Num of used threads")
 
+    parser.add_argument(
+        "pad_id", default=0, type=int, help="Pad id"
+    )
+
+    parser.add_argument(
+        "bos_id", default=1, type=int, help="Beginning of sentence id"
+    )
+
+    parser.add_argument(
+        "eos_id", default=2, type=int, help="End of sentence id"
+    )
+
+    parser.add_argument(
+        "unk_id", default=3, type=int, help="Unknown id"
+    )
+
     args = parser.parse_args()
 
     spm_trainer = SPMVocabularyTrainer(**vars(args))
