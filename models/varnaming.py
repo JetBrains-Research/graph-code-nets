@@ -270,7 +270,7 @@ class VarNamingModel(pl.LightningModule):
             mrr_found = False
             for top_k_i in range(input_t.shape[1]):
                 input_ = input_t[b_i, top_k_i]
-                target_ = target_t[b_i, top_k_i]
+                target_ = target_t[b_i, 0]
                 input_dec = self.vocabulary.decode(input_.tolist())
                 target_dec = self.vocabulary.decode(target_.tolist())
                 if (
