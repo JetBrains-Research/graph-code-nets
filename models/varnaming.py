@@ -269,10 +269,14 @@ class VarNamingModel(pl.LightningModule):
         for b_i in range(input_t.shape[0]):
             mrr_found = False
             for top_k_i in range(input_t.shape[1]):
-                input_ = input_t[b_i, top_k_i]
-                target_ = target_t[b_i, 0]
-                input_dec = self.vocabulary.decode(input_.tolist())
-                target_dec = self.vocabulary.decode(target_.tolist())
+                input_ = input_t[b_i, top_k_i].tolist()
+                target_ = target_t[b_i, 0].tolist()
+
+                input_to_eos = input_[:input_.index(self.vocabulary.eos_id())+1]
+                target_to_eos = input_[:input_.index(self.vocabulary.eos_id())+1]
+
+                input_dec = self.vocabulary.decode(input_to_eos)
+                target_dec = self.vocabulary.decode(target_to_eos)
                 if (
                     self.vocabulary.unk_id() in input_
                     or self.vocabulary.unk_id() in target_
@@ -291,7 +295,7 @@ class VarNamingModel(pl.LightningModule):
                 if top_k_i < mrr_k and not mrr_found and exact_match:
                     mrr_found = True
                     mrr_exact_k += 1.0 / (top_k_i + 1)
-                if top_k_i < acc_k:
+                if top_k_i < acc_k and exact_match:
                     acc_exact_k += 1.0 / acc_k
             if not mrr_found:
                 mrr_exact_k += 0.0  # just for clarity
