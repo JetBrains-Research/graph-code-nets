@@ -272,8 +272,15 @@ class VarNamingModel(pl.LightningModule):
                 input_ = input_t[b_i, top_k_i].tolist()
                 target_ = target_t[b_i, 0].tolist()
 
-                input_to_eos = input_[:input_.index(self.vocabulary.eos_id())+1]
-                target_to_eos = input_[:input_.index(self.vocabulary.eos_id())+1]
+                if self.vocabulary.eos_id() in input_:
+                    input_to_eos = input_[:input_.index(self.vocabulary.eos_id())+1]
+                else:
+                    input_to_eos = input_
+
+                if self.vocabulary.eos_id() in target_:
+                    target_to_eos = target_[:target_.index(self.vocabulary.eos_id())+1]
+                else:
+                    target_to_eos = target_
 
                 input_dec = self.vocabulary.decode(input_to_eos)
                 target_dec = self.vocabulary.decode(target_to_eos)
