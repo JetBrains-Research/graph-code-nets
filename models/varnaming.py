@@ -317,7 +317,7 @@ class VarNamingModel(pl.LightningModule):
             batch_size=batch.num_graphs,
         )
         self.log(
-            f"accuracy_exact_top{acc_k}",
+            f"accuracy_exact_top_k_{acc_k}",
             acc_exact_k,
             prog_bar=True,
             on_epoch=True,
