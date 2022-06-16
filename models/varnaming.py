@@ -86,6 +86,7 @@ class VarNamingModel(pl.LightningModule):
                     dtype=torch.int,
                     device=self.device,
                 ).fill_(self.vocabulary.pad_id())
+                # TODO FIX: remove batch iterating, do for the whole batch
                 for b_i in range(varname_batch.size(0)):
                     varname_batch_part = varname_batch[
                         b_i : b_i + 1, :
@@ -213,7 +214,7 @@ class VarNamingModel(pl.LightningModule):
     ) -> tuple[Tensor, Tensor]:
         predicted = self(batch)
         loss = self.loss_fn(
-            predicted.reshape(-1, predicted.shape[-1]), batch.name.long().reshape(-1)
+            predicted[:, :-1, :].reshape(-1, predicted.shape[-1]), batch.name[:, 1:].long().reshape(-1)
         )
         self.log(
             f"{step}_loss",
