@@ -112,8 +112,7 @@ class VarNamingModel(pl.LightningModule):
                         break
 
                 generated_batch = (
-                    torch.ones((varname_batch.size(0), 1, self.max_token_length))
-                    .type_as(current.data)
+                    torch.ones((varname_batch.size(0), 1, self.max_token_length), dtype=torch.int)
                     .fill_(self.vocabulary.pad_id())
                 )
                 generated_batch[:, 0, : current.size(1)] = current
