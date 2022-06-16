@@ -10,6 +10,7 @@ from data_processing.graph_var_miner.graph_var_miner_dataset_iterable import (
     GraphVarMinerDatasetIterable,
 )
 from data_processing.vocabulary.vocabulary import Vocabulary
+from models.utils import fix_seed
 
 
 class GraphVarMinerModule(pl.LightningDataModule):
@@ -26,6 +27,9 @@ class GraphVarMinerModule(pl.LightningDataModule):
         self._train: Optional[Dataset[Any]] = None
         self._validation: Optional[Dataset[Any]] = None
         self._test: Optional[Dataset[Any]] = None
+
+        self._seed = int(config["seed"])
+        fix_seed(self._seed)
 
     def prepare_data(self):
         pass

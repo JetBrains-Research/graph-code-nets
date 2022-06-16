@@ -1,3 +1,4 @@
+import random
 from typing import List, Union
 import numpy as np
 import torch
@@ -61,3 +62,20 @@ def sparse_softmax_cross_entropy_with_logits(
     labels = error_locations.type(torch.long)
     loss = torch.nn.CrossEntropyLoss(reduction="none")
     return loss(loss_input, labels)
+
+
+def fix_seed(seed, deterministic=False):
+    # https://pytorch.org/docs/stable/notes/randomness.html
+
+    # Python
+    random.seed(seed)
+
+    # Numpy
+    np.random.seed(seed)
+
+    # PyTorch
+    torch.manual_seed(seed)
+
+    if deterministic:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False

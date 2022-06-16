@@ -15,7 +15,7 @@ from torch_geometric.utils import to_dense_batch
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
-from models.utils import generate_padding_mask, remove_special_symbols
+from models.utils import generate_padding_mask, remove_special_symbols, fix_seed
 
 
 class VarNamingModel(pl.LightningModule):
@@ -25,6 +25,9 @@ class VarNamingModel(pl.LightningModule):
         self.config = config
         self.vocabulary = vocabulary
         self.max_token_length = self.config["vocabulary"]["max_token_length"]
+
+        self.seed = int(config["seed"])
+        fix_seed(self.seed)
 
         encoder_config = self.config["model"][self.config["model"]["encoder"]]
         if self.config["model"]["encoder"] == "gcn":
