@@ -76,15 +76,15 @@ test:
     debug: False
 
   dataloader:
-    batch_size: 1
+    batch_size: 64
     num_workers: 4
     pin_memory: True
     persistent_workers: True
 
   generation:
-    method: "beam_search"
+    method: "greedy"
     gen_check_interval: 9600
     bandwidth: 5
     max_steps: 1000
-    mrr_k: 5
-    acc_k: 5
+    mrr_k: 1
+    acc_k: 1

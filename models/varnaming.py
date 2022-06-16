@@ -59,11 +59,16 @@ class VarNamingModel(pl.LightningModule):
             target_mask = Transformer.generate_square_subsequent_mask(
                 self.max_token_length
             ).to(self.device)
+            with open('test_log.z', 'a') as f:
+                f.write(f'forward mask: {target_mask}\n')
 
             # TODO: investigate if this mask has any effect
             target_padding_mask = generate_padding_mask(
                 target_batch, self.vocabulary.pad_id(), device=self.device
             )
+            with open('test_log.z', 'a') as f:
+                f.write(f'forward target_batch: {target_batch[:, :7]}\n')
+                f.write(f'forward padding: {target_padding_mask[:, :7]}\n')
 
             predicted = self.decoder(
                 target_batch,  # shape: [batch size, src_seq_length]
@@ -198,6 +203,8 @@ class VarNamingModel(pl.LightningModule):
                         target_mask = Transformer.generate_square_subsequent_mask(
                             current_state.size(1)
                         ).to(self.device)
+                        with open('test_log.z', 'a') as f:
+                            f.write(f'beam search mask: {target_mask}\n')
 
                         # shape: (1, length, target_vocabulary_size)
                         predicted = self.decoder(
