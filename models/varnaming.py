@@ -98,7 +98,7 @@ class VarNamingModel(pl.LightningModule):
                         f.write(f"Chosen next word: {next_word_batch}\n")
 
                     current = torch.cat(
-                        [current, next_word_batch.type_as(current.data)],
+                        [current, next_word_batch.type_as(current.data).unsqueeze(-1)],
                         dim=1,
                     )
 
