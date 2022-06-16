@@ -14,23 +14,25 @@ model:
 
 vocabulary:
   type: 'spm'
-  path: 'pretrained/vocab_bpe_10p.model'   # e.g. my_vocab.model
-  max_token_length: 16  # In terms of (BPE) sub-tokens. 0.999 percentile word coverage
+  path: 'pretrained/vocab_uni_10p_pad.model'   # e.g. my_vocab.model; unigram is more perfomance than bpe
+  max_token_length: 18  # In terms of (BPE) sub-tokens. 0.999 percentile word coverage
 
 data:
-  root: 'datasets/example_3_samples4'
+  root: 'datasets/java_small_preprocessed_pad'
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
-  cache_in_ram: True  # if True, must be used with dataloader.persistent_workers: True
-  preprocessed: True
-  max_node_count: 50000  # 0.99999 percentile; bigger graphs could cause OOM and will be ignored
+  cache_in_ram: False  # if True, must be used with dataloader.persistent_workers: True
+  preprocessed: True  # with scripts/preprocess_varnaming_dataset.py
+  max_node_count: 5000  # 0.9972 percentile; bigger graphs could cause OOM and will be ignored
 
 trainer:
-  max_epochs: 5
+  max_epochs: 2
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 1
-  val_check_interval: 0.25  # 4 times per train epoch
+  val_check_interval: 4800  # ~8 times per train epoch (< 2500000/batch_size/4)
   precision: 16
+  num_sanity_val_steps: 1
+  auto_lr_find: True
 
 checkpoint:
   dir: 'checkpoints'
@@ -44,7 +46,7 @@ train:
   learning_rate: 0.0001
 
   dataset:
-    debug: False
+    debug: True
 
   dataloader:
     batch_size: 64
@@ -55,7 +57,7 @@ train:
 
 validation:
   dataset:
-    debug: False
+    debug: True
 
   dataloader:
     batch_size: 64
@@ -64,19 +66,15 @@ validation:
     persistent_workers: True
 
   generation:
-    method: "beam_search"
-    gen_check_interval: 9600
-    bandwidth: 10
-    max_steps: 5000
-    mrr_k: 5
-    acc_k: 5
+    mrr_k: 1
+    acc_k: 1
 
 test:
   dataset:
     debug: False
 
   dataloader:
-    batch_size: 64
+    batch_size: 1
     num_workers: 4
     pin_memory: True
     persistent_workers: True
@@ -84,7 +82,7 @@ test:
   generation:
     method: "beam_search"
     gen_check_interval: 9600
-    bandwidth: 10
-    max_steps: 5000
+    bandwidth: 5
+    max_steps: 1000
     mrr_k: 5
     acc_k: 5

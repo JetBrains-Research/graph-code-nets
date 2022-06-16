@@ -107,6 +107,8 @@ class VarNamingModel(pl.LightningModule):
                         )
                         _, next_word_batch = torch.max(predicted[:, -1, :], dim=1)
                         next_word = next_word_batch.item()
+                        with open('test_log.z','a') as f:
+                            f.write(f'Chosen next word: {next_word}\n')
 
                         if next_word == self.vocabulary.eos_id():
                             break
@@ -258,6 +260,16 @@ class VarNamingModel(pl.LightningModule):
         target_t = (
             to_dense_batch(batch.name)[0].transpose(0, 1).int()
         ).int()  # (batch, 1, dim)  # 1 because there is only 1 name in sample
+        
+        with open('test_log.z', 'a') as f:
+            f.write(f"Batch index: {batch_idx}\n")
+            for i in range(input_t.size(0)):
+                for j in range(input_t.size(1)):
+                    targ = input_t[i, j].cpu().detach().numpy().tolist()
+                    orig = target_t[i, 0].int().cpu().detach().numpy().tolist()
+                    f.write(f"{type(targ[0])} {type(orig[0])}")
+                    f.write(f"{i} {j} {targ} {orig} to ")
+                    f.write(f"{self.vocabulary.decode(targ)} {self.vocabulary.decode(orig)}\n")
 
         chrf_metric = CHRF()
 
@@ -291,6 +303,8 @@ class VarNamingModel(pl.LightningModule):
                     exact_match = False
                 else:
                     exact_match = input_dec == target_dec
+                with open('test_log.z', 'a') as f:
+                    f.write(f'res: {exact_match} {input_dec} {target_dec}\n')
                 if top_k_i == 0:
                     if target_dec != "":
                         chrf += chrf_metric.sentence_score(
@@ -312,11 +326,14 @@ class VarNamingModel(pl.LightningModule):
         acc_exact_1 /= input_t.shape[0]
         acc_exact_k /= input_t.shape[0]
         mrr_exact_k /= input_t.shape[0]
+        with open('test_log.z', 'a') as f:
+            f.write(f'metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n')
 
         self.log(
             "chrf",
             chrf,
             prog_bar=True,
+            on_step=True,
             on_epoch=True,
             batch_size=batch.num_graphs,
         )
@@ -324,6 +341,7 @@ class VarNamingModel(pl.LightningModule):
             f"accuracy_exact_top{1}",
             acc_exact_1,
             prog_bar=True,
+            on_step=True,
             on_epoch=True,
             batch_size=batch.num_graphs,
         )
@@ -331,6 +349,7 @@ class VarNamingModel(pl.LightningModule):
             f"accuracy_exact_top_k_{acc_k}",
             acc_exact_k,
             prog_bar=True,
+            on_step=True,
             on_epoch=True,
             batch_size=batch.num_graphs,
         )
@@ -338,6 +357,7 @@ class VarNamingModel(pl.LightningModule):
             f"mrr_exact_top{mrr_k}",
             mrr_exact_k,
             prog_bar=True,
+            on_step=True,
             on_epoch=True,
             batch_size=batch.num_graphs,
         )
