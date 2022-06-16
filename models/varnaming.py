@@ -29,6 +29,8 @@ class VarNamingModel(pl.LightningModule):
         self.seed = int(config["seed"])
         fix_seed(self.seed)
 
+        self.debug = config["model"].get("debug") or False
+
         encoder_config = self.config["model"][self.config["model"]["encoder"]]
         if self.config["model"]["encoder"] == "gcn":
             self.encoder = GCNEncoder(
@@ -59,16 +61,18 @@ class VarNamingModel(pl.LightningModule):
             target_mask = Transformer.generate_square_subsequent_mask(
                 self.max_token_length
             ).to(self.device)
-            with open('test_log.z', 'a') as f:
-                f.write(f'forward mask: {target_mask}\n')
+            if self.debug:
+                with open('test_log.z', 'a') as f:
+                    f.write(f'forward mask: {target_mask}\n')
 
             # TODO: investigate if this mask has any effect
             target_padding_mask = generate_padding_mask(
                 target_batch, self.vocabulary.pad_id(), device=self.device
             )
-            with open('test_log.z', 'a') as f:
-                f.write(f'forward target_batch: {target_batch[:, :7]}\n')
-                f.write(f'forward padding: {target_padding_mask[:, :7]}\n')
+            if self.debug:
+                with open('test_log.z', 'a') as f:
+                    f.write(f'forward target_batch: {target_batch[:, :7]}\n')
+                    f.write(f'forward padding: {target_padding_mask[:, :7]}\n')
 
             predicted = self.decoder(
                 target_batch,  # shape: [batch size, src_seq_length]
@@ -102,8 +106,9 @@ class VarNamingModel(pl.LightningModule):
                         current, varname_batch, tgt_mask=target_mask
                     )
                     _, next_word_batch = torch.max(predicted[:, -1, :], dim=1)
-                    with open("test_log.z", "a") as f:
-                        f.write(f"Chosen next word: {next_word_batch}\n")
+                    if self.debug:
+                        with open("test_log.z", "a") as f:
+                            f.write(f"Chosen next word: {next_word_batch}\n")
 
                     current = torch.cat(
                         [current, next_word_batch.type_as(current.data).unsqueeze(-1)],
@@ -138,8 +143,9 @@ class VarNamingModel(pl.LightningModule):
                         :, 0, :-1
                     ]
                 ] = self.vocabulary.pad_id()
-                with open("test_log.z", "a") as f:
-                    f.write(f"Greedy generated batch: {generated_batch}\n")
+                if self.debug:
+                    with open("test_log.z", "a") as f:
+                        f.write(f"Greedy generated batch: {generated_batch}\n")
                 return generated_batch
             elif method == "beam_search":
 
@@ -203,8 +209,9 @@ class VarNamingModel(pl.LightningModule):
                         target_mask = Transformer.generate_square_subsequent_mask(
                             current_state.size(1)
                         ).to(self.device)
-                        with open('test_log.z', 'a') as f:
-                            f.write(f'beam search mask: {target_mask}\n')
+                        if self.debug:
+                            with open('test_log.z', 'a') as f:
+                                f.write(f'beam search mask: {target_mask}\n')
 
                         # shape: (1, length, target_vocabulary_size)
                         predicted = self.decoder(
@@ -281,17 +288,18 @@ class VarNamingModel(pl.LightningModule):
             to_dense_batch(batch.name)[0].transpose(0, 1).int()
         ).int()  # (batch, 1, dim)  # 1 because there is only 1 name in sample
 
-        with open("test_log.z", "a") as f:
-            f.write(f"Batch index: {batch_idx}\n")
-            for i in range(input_t.size(0)):
-                for j in range(input_t.size(1)):
-                    targ = input_t[i, j].cpu().detach().numpy().tolist()
-                    orig = target_t[i, 0].int().cpu().detach().numpy().tolist()
-                    f.write(f"{type(targ[0])} {type(orig[0])}")
-                    f.write(f"{i} {j} {targ} {orig} to ")
-                    f.write(
-                        f"{self.vocabulary.decode(targ)} {self.vocabulary.decode(orig)}\n"
-                    )
+        if self.debug:
+            with open("test_log.z", "a") as f:
+                f.write(f"Batch index: {batch_idx}\n")
+                for i in range(input_t.size(0)):
+                    for j in range(input_t.size(1)):
+                        targ = input_t[i, j].cpu().detach().numpy().tolist()
+                        orig = target_t[i, 0].int().cpu().detach().numpy().tolist()
+                        f.write(f"{type(targ[0])} {type(orig[0])}")
+                        f.write(f"{i} {j} {targ} {orig} to ")
+                        f.write(
+                            f"{self.vocabulary.decode(targ)} {self.vocabulary.decode(orig)}\n"
+                        )
 
         chrf_metric = CHRF()
 
@@ -327,8 +335,9 @@ class VarNamingModel(pl.LightningModule):
                     exact_match = False
                 else:
                     exact_match = input_dec == target_dec
-                with open("test_log.z", "a") as f:
-                    f.write(f"res: {exact_match} {input_dec} {target_dec}\n")
+                if self.debug:
+                    with open("test_log.z", "a") as f:
+                        f.write(f"res: {exact_match} {input_dec} {target_dec}\n")
                 if top_k_i == 0:
                     if target_dec != "":
                         chrf += chrf_metric.sentence_score(
@@ -350,8 +359,9 @@ class VarNamingModel(pl.LightningModule):
         acc_exact_1 /= input_t.shape[0]
         acc_exact_k /= input_t.shape[0]
         mrr_exact_k /= input_t.shape[0]
-        with open("test_log.z", "a") as f:
-            f.write(f"metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n")
+        if self.debug:
+            with open("test_log.z", "a") as f:
+                f.write(f"metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n")
 
         self.log(
             "chrf",

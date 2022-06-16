@@ -13,6 +13,7 @@ model:
     dim_feedforward: 2048
     nhead: 8
     dropout: 0.1
+  debug: False
 
 vocabulary:
   type: 'spm'
