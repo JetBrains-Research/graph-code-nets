@@ -112,22 +112,24 @@ class VarNamingModel(pl.LightningModule):
                         break
 
                 generated_batch = (
-                    torch.ones((varname_batch.size(0), self.max_token_length))
+                    torch.ones((varname_batch.size(0), 1, self.max_token_length))
                     .type_as(current.data)
                     .fill_(self.vocabulary.pad_id())
                 )
-                generated_batch[:, : current.size(1)] = current
+                generated_batch[:, 0, : current.size(1)] = current
                 generated_batch[
-                    :, current.size(1)
-                ] = self.vocabulary.eos_id()  # add eos in case it was not generated at all
+                    :, 0, current.size(1)
+                ] = (
+                    self.vocabulary.eos_id()
+                )  # add eos in case it was not generated at all
 
                 # set pad after first eos
                 # something very ugly, but working :)
                 # first create bitmask of eos, then cumsum, so only those before eos are 0 then bitmask elements
                 # that are not 0 and shift it to the right, so we don't pad eos element
-                generated_batch[:, 1:][
+                generated_batch[:, 0, 1:][
                     ((generated_batch == self.vocabulary.eos_id()).cumsum(dim=1) != 0)[
-                        :, :-1
+                        :, 0, :-1
                     ]
                 ] = self.vocabulary.pad_id()
                 with open("test_log.z", "a") as f:
