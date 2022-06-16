@@ -15,7 +15,7 @@ from torch_geometric.utils import to_dense_batch
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
-from models.utils import generate_padding_mask, remove_special_symbols, fix_seed
+from models.utils import generate_padding_mask, fix_seed
 
 
 class VarNamingModel(pl.LightningModule):
@@ -114,10 +114,9 @@ class VarNamingModel(pl.LightningModule):
                     if all_eos:
                         break
 
-                generated_batch = (
-                    torch.ones((varname_batch.size(0), 1, self.max_token_length), dtype=torch.int)
-                    .fill_(self.vocabulary.pad_id())
-                )
+                generated_batch = torch.ones(
+                    (varname_batch.size(0), 1, self.max_token_length), dtype=torch.int
+                ).fill_(self.vocabulary.pad_id())
                 generated_batch[:, 0, : current.size(1)] = current
                 generated_batch[
                     :, 0, current.size(1)
