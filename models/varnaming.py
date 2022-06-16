@@ -125,6 +125,8 @@ class VarNamingModel(pl.LightningModule):
                 generated_batch[:, 1:] *= (
                     (generated_batch == self.vocabulary.eos_id()).cumsum(dim=1) == 0
                 )[:, :-1]
+                with open('test_log.z', 'a') as f:
+                    f.write(f'Greedy generated batch: {generated_batch}\n')
                 return generated_batch
             elif method == "beam_search":
 
