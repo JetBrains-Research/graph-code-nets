@@ -116,9 +116,9 @@ class VarNamingModel(pl.LightningModule):
                     .type_as(current.data)
                     .fill_(self.vocabulary.pad_id())
                 )
-                generated_batch[:, : varname_batch.size(1)] = varname_batch
+                generated_batch[:, : current.size(1)] = current
                 generated_batch[
-                    :, varname_batch.size(1)
+                    :, current.size(1)
                 ] = self.vocabulary.eos_id()  # add eos in case it was not generated at all
 
                 # set pad after first eos
