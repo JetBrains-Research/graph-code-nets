@@ -111,22 +111,27 @@ class VarNamingModel(pl.LightningModule):
                     if all_eos:
                         break
 
-                # add eos to the end
-                generated_batch = torch.cat(
-                    [
-                        current,
-                        torch.ones((varname_batch.size(0), 1))
-                        .type_as(current.data)
-                        .fill_(self.vocabulary.eos_id()),
-                    ],
-                    dim=1,
+                generated_batch = (
+                    torch.ones((varname_batch.size(0), self.max_token_length))
+                    .type_as(current.data)
+                    .fill_(self.vocabulary.pad_id())
                 )
-                # zero everything after first eos
-                generated_batch[:, 1:] *= (
-                    (generated_batch == self.vocabulary.eos_id()).cumsum(dim=1) == 0
-                )[:, :-1]
-                with open('test_log.z', 'a') as f:
-                    f.write(f'Greedy generated batch: {generated_batch}\n')
+                generated_batch[:, : varname_batch.size(1)] = varname_batch
+                generated_batch[
+                    :, varname_batch.size(1)
+                ] = self.vocabulary.eos_id()  # add eos in case it was not generated at all
+
+                # set pad after first eos
+                # something very ugly, but working :)
+                # first create bitmask of eos, then cumsum, so only those before eos are 0 then bitmask elements
+                # that are not 0 and shift it to the right, so we don't pad eos element
+                generated_batch[:, 1:][
+                    ((generated_batch == self.vocabulary.eos_id()).cumsum(dim=1) != 0)[
+                        :, :-1
+                    ]
+                ] = self.vocabulary.pad_id()
+                with open("test_log.z", "a") as f:
+                    f.write(f"Greedy generated batch: {generated_batch}\n")
                 return generated_batch
             elif method == "beam_search":
 
