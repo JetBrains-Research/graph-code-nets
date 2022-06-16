@@ -81,49 +81,50 @@ class VarNamingModel(pl.LightningModule):
 
         if self.config["model"]["decoder"] == "transformer_decoder":
             if method == "greedy":
-                generated_batch = torch.ones(
-                    (varname_batch.size(0), 1, self.max_token_length),
-                    dtype=torch.int,
-                    device=self.device,
-                ).fill_(self.vocabulary.pad_id())
-                # TODO FIX: remove batch iterating, do for the whole batch
-                for b_i in range(varname_batch.size(0)):
-                    varname_batch_part = varname_batch[
-                        b_i : b_i + 1, :
-                    ]  # keep batch dimension
+                current = torch.ones(
+                    (varname_batch.size(0), 1), device=self.device
+                ).fill_(self.vocabulary.bos_id())
 
-                    current = torch.ones((1, 1), device=self.device).fill_(
-                        self.vocabulary.bos_id()
+                for i in range(self.max_token_length - 2):  # bos + variable name + eos
+                    target_mask = Transformer.generate_square_subsequent_mask(
+                        current.size(1)
+                    ).to(self.device)
+
+                    predicted = self.decoder(
+                        current, varname_batch, tgt_mask=target_mask
+                    )
+                    _, next_word_batch = torch.max(predicted[:, -1, :], dim=1)
+                    with open("test_log.z", "a") as f:
+                        f.write(f"Chosen next word: {next_word_batch}\n")
+
+                    current = torch.cat(
+                        [current, next_word_batch.type_as(current.data)],
+                        dim=1,
                     )
 
-                    for i in range(
-                        self.max_token_length - 2
-                    ):  # bos + variable name + eos
-                        target_mask = Transformer.generate_square_subsequent_mask(
-                            current.size(1)
-                        ).to(self.device)
+                    all_eos = (
+                        (current == self.vocabulary.eos_id())
+                        .any(dim=1)
+                        .all(dim=0)
+                        .item()
+                    )
+                    if all_eos:
+                        break
 
-                        predicted = self.decoder(
-                            current, varname_batch_part, tgt_mask=target_mask
-                        )
-                        _, next_word_batch = torch.max(predicted[:, -1, :], dim=1)
-                        next_word = next_word_batch.item()
-                        with open('test_log.z','a') as f:
-                            f.write(f'Chosen next word: {next_word}\n')
-
-                        if next_word == self.vocabulary.eos_id():
-                            break
-
-                        current = torch.cat(
-                            [
-                                current,
-                                torch.ones(1, 1).type_as(current.data).fill_(next_word),
-                            ],
-                            dim=1,
-                        )
-
-                    generated_batch[b_i : b_i + 1, 0, : current.size(1)] = current
-                    generated_batch[b_i, 0, current.size(1)] = self.vocabulary.eos_id()
+                # add eos to the end
+                generated_batch = torch.cat(
+                    [
+                        current,
+                        torch.ones((varname_batch.size(0), 1))
+                        .type_as(current.data)
+                        .fill_(self.vocabulary.eos_id()),
+                    ],
+                    dim=1,
+                )
+                # zero everything after first eos
+                generated_batch[:, 1:] *= (
+                    (generated_batch == self.vocabulary.eos_id()).cumsum(dim=1) == 0
+                )[:, :-1]
                 return generated_batch
             elif method == "beam_search":
 
@@ -214,7 +215,8 @@ class VarNamingModel(pl.LightningModule):
     ) -> tuple[Tensor, Tensor]:
         predicted = self(batch)
         loss = self.loss_fn(
-            predicted[:, :-1, :].reshape(-1, predicted.shape[-1]), batch.name[:, 1:].long().reshape(-1)
+            predicted[:, :-1, :].reshape(-1, predicted.shape[-1]),
+            batch.name[:, 1:].long().reshape(-1),
         )
         self.log(
             f"{step}_loss",
@@ -261,8 +263,8 @@ class VarNamingModel(pl.LightningModule):
         target_t = (
             to_dense_batch(batch.name)[0].transpose(0, 1).int()
         ).int()  # (batch, 1, dim)  # 1 because there is only 1 name in sample
-        
-        with open('test_log.z', 'a') as f:
+
+        with open("test_log.z", "a") as f:
             f.write(f"Batch index: {batch_idx}\n")
             for i in range(input_t.size(0)):
                 for j in range(input_t.size(1)):
@@ -270,7 +272,9 @@ class VarNamingModel(pl.LightningModule):
                     orig = target_t[i, 0].int().cpu().detach().numpy().tolist()
                     f.write(f"{type(targ[0])} {type(orig[0])}")
                     f.write(f"{i} {j} {targ} {orig} to ")
-                    f.write(f"{self.vocabulary.decode(targ)} {self.vocabulary.decode(orig)}\n")
+                    f.write(
+                        f"{self.vocabulary.decode(targ)} {self.vocabulary.decode(orig)}\n"
+                    )
 
         chrf_metric = CHRF()
 
@@ -286,12 +290,14 @@ class VarNamingModel(pl.LightningModule):
                 target_ = target_t[b_i, 0].tolist()
 
                 if self.vocabulary.eos_id() in input_:
-                    input_to_eos = input_[:input_.index(self.vocabulary.eos_id())+1]
+                    input_to_eos = input_[: input_.index(self.vocabulary.eos_id()) + 1]
                 else:
                     input_to_eos = input_
 
                 if self.vocabulary.eos_id() in target_:
-                    target_to_eos = target_[:target_.index(self.vocabulary.eos_id())+1]
+                    target_to_eos = target_[
+                        : target_.index(self.vocabulary.eos_id()) + 1
+                    ]
                 else:
                     target_to_eos = target_
 
@@ -304,8 +310,8 @@ class VarNamingModel(pl.LightningModule):
                     exact_match = False
                 else:
                     exact_match = input_dec == target_dec
-                with open('test_log.z', 'a') as f:
-                    f.write(f'res: {exact_match} {input_dec} {target_dec}\n')
+                with open("test_log.z", "a") as f:
+                    f.write(f"res: {exact_match} {input_dec} {target_dec}\n")
                 if top_k_i == 0:
                     if target_dec != "":
                         chrf += chrf_metric.sentence_score(
@@ -327,8 +333,8 @@ class VarNamingModel(pl.LightningModule):
         acc_exact_1 /= input_t.shape[0]
         acc_exact_k /= input_t.shape[0]
         mrr_exact_k /= input_t.shape[0]
-        with open('test_log.z', 'a') as f:
-            f.write(f'metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n')
+        with open("test_log.z", "a") as f:
+            f.write(f"metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n")
 
         self.log(
             "chrf",
