@@ -122,12 +122,12 @@ class VarNamingModel(pl.LightningModule):
                     self.vocabulary.eos_id()
                 )  # add eos in case it was not generated at all
 
-                # set pad after first eos
+                # fill pad after first eos
                 # something very ugly, but working :)
                 # first create bitmask of eos, then cumsum, so only those before eos are 0 then bitmask elements
                 # that are not 0 and shift it to the right, so we don't pad eos element
                 generated_batch[:, 0, 1:][
-                    ((generated_batch == self.vocabulary.eos_id()).cumsum(dim=1) != 0)[
+                    ((generated_batch == self.vocabulary.eos_id()).cumsum(dim=2) != 0)[
                         :, 0, :-1
                     ]
                 ] = self.vocabulary.pad_id()
