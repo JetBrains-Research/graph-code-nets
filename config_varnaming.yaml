@@ -36,6 +36,7 @@ trainer:
   precision: 16
   num_sanity_val_steps: 1
   auto_lr_find: True
+  gradient_clip_val: 1.0
 
 checkpoint:
   dir: 'checkpoints'
