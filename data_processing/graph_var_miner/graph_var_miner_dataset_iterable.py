@@ -168,7 +168,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
                 enc = self._vocabulary.encode(token)[: self._max_token_len]
             length = len(enc)
             out_tensor[i, :length] = enc
-        return torch.Tensor(out_tensor, device=self.device)
+        return torch.tensor(out_tensor, device=self.device)
 
     def _data_sample(self):
         if self.__data_sample is None:
@@ -236,7 +236,8 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         worker_info = torch.utils.data.get_worker_info()
         if self._debug:
             print(
-                f"New iterable created by worker {worker_info.id}! Id: {multiprocessing.current_process()}"
+                f"New iterable created by worker {worker_info.id if worker_info is not None else -1}! "
+                f"Id: {multiprocessing.current_process()}"
             )
         if worker_info is None:
             files_slice = self._data_files

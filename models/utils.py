@@ -1,7 +1,9 @@
+import math
 import random
-from typing import List, Union
+
 import numpy as np
 import torch
+from torch import nn
 
 
 def generate_padding_mask(src_or_tgt, pad_id, device):
@@ -79,3 +81,14 @@ def fix_seed(seed, deterministic=False):
     if deterministic:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
+
+
+# helper Module to convert tensor of input indices into corresponding tensor of token embeddings
+class TokenEmbedding(nn.Module):
+    def __init__(self, vocab_size: int, embedding_dim: int, **kwargs):
+        super(TokenEmbedding, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embedding_dim, **kwargs)
+        self.embedding_dim = embedding_dim
+
+    def forward(self, tokens: Tensor) -> Tensor:  # type: ignore
+        return self.embedding(tokens.long()) * math.sqrt(self.embedding_dim)

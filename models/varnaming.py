@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+import torch_scatter
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from sacrebleu import CHRF
 from torch import Tensor
@@ -13,9 +14,9 @@ from torch_geometric.data import Batch
 from torch_geometric.utils import to_dense_batch
 
 from data_processing.vocabulary.vocabulary import Vocabulary
-from models.gcn_encoder import GCNEncoder
+from models.encoder_gcn import GCNEncoder
 from models.transformer_decoder import GraphTransformerDecoder
-from models.utils import generate_padding_mask, fix_seed
+from models.utils import generate_padding_mask, fix_seed, TokenEmbedding
 
 
 class VarNamingModel(pl.LightningModule):
@@ -31,11 +32,19 @@ class VarNamingModel(pl.LightningModule):
 
         self.debug = config["model"].get("debug") or False
 
+        self.embedding_dim = self.config["model"]["embedding"]["embedding_dim"]
+
+        self.node_embedding = TokenEmbedding(
+            vocab_size=len(self.vocabulary),
+            padding_idx=self.vocabulary.pad_id(),
+            **self.config["model"]["embedding"],
+        )
+
         encoder_config = self.config["model"][self.config["model"]["encoder"]]
         if self.config["model"]["encoder"] == "gcn":
             self.encoder = GCNEncoder(
                 **encoder_config,
-                in_channels=self.max_token_length,
+                in_channels=self.embedding_dim,
             )  # torch_geometric.data.Data -> torch.Tensor [num_nodes, d_model]
         else:
             raise ValueError(f"Unknown encoder type: {self.config['model']['encoder']}")
@@ -53,10 +62,27 @@ class VarNamingModel(pl.LightningModule):
         self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=vocabulary.pad_id())
 
     def forward(self, batch: Batch) -> Tensor:  # type: ignore
-        varname_batch: torch.Tensor = self.encoder(batch)
+        # batch.x shape: [num_nodes in batch, src_seq_length]
+
+        # shape: [num_nodes in batch, src_seq_length, embedding_dim]
+        x_embedding = self.node_embedding(batch.x)  # type: ignore
+
+        # shape: [batch size, embedding_dim]
+        x_mean_embedding = torch_scatter.scatter_mean(x_embedding, batch.batch, dim=1)
+
+        if self.config["model"]["encoder"] == "gcn":
+            # shape: [num_nodes in batch, out_channels]
+            varname_batch: torch.Tensor = self.encoder(x_mean_embedding, batch.edge_index)  # type: ignore
+
+            # shape: [batch, 1, out_channels]
+            varname_batch = torch_scatter.scatter_mean(
+                varname_batch * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
+            ).unsqueeze(1)
+        else:
+            raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
 
         if self.config["model"]["decoder"] == "transformer_decoder":
-            target_batch = batch.name
+            target_batch = batch.name  # shape: [batch size, src_seq_length]
 
             target_mask = Transformer.generate_square_subsequent_mask(
                 self.max_token_length
@@ -69,13 +95,18 @@ class VarNamingModel(pl.LightningModule):
             target_padding_mask = generate_padding_mask(
                 target_batch, self.vocabulary.pad_id(), device=self.device
             )
+
+            target_batch = self.node_embedding(
+                target_batch
+            )  # shape: [batch size, src_seq_length, embedding_dim]
+
             if self.debug:
                 with open("test_log.z", "a") as f:
                     f.write(f"forward target_batch: {target_batch[:, :7]}\n")
                     f.write(f"forward padding: {target_padding_mask[:, :7]}\n")
 
             predicted = self.decoder(
-                target_batch,  # shape: [batch size, src_seq_length]
+                target_batch,  # shape: [batch size, src_seq_length, embedding_dim]
                 varname_batch,  # shape: [batch size, 1, d_model]
                 tgt_mask=target_mask,  # shape: [src_seq_length, src_seq_length]
                 tgt_key_padding_mask=target_padding_mask,  # shape: [batch size, src_seq_length]

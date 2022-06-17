@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Callable
+from typing import Optional
 
 import pytorch_lightning as pl
 import torch
@@ -24,17 +24,6 @@ class PositionalEncoding(nn.Module):
         return self.dropout(token_embedding + self.pos_embedding[:, : token_embedding.size(1), :])  # type: ignore
 
 
-# helper Module to convert tensor of input indices into corresponding tensor of token embeddings
-class TokenEmbedding(nn.Module):
-    def __init__(self, vocab_size: int, emb_size):
-        super(TokenEmbedding, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, emb_size)
-        self.emb_size = emb_size
-
-    def forward(self, tokens: Tensor) -> Tensor:  # type: ignore
-        return self.embedding(tokens.long()) * math.sqrt(self.emb_size)
-
-
 class GraphTransformerDecoder(pl.LightningModule):
     def __init__(
         self,
@@ -57,13 +46,13 @@ class GraphTransformerDecoder(pl.LightningModule):
         )
         self.decoder = TransformerDecoder(decoder_layer, num_layers)
 
-        self.tgt_tok_emb = TokenEmbedding(target_vocab_size, d_model)
         self.generator = nn.Linear(d_model, target_vocab_size)
         self.positional_encoding = PositionalEncoding(d_model, dropout=dropout)
 
+    # TODO perhaps experiment with source_size (maybe use sequent gcn_encoder outputs? like after 1st, 2nd and so on)
     def forward(  # type: ignore
         self,
-        tgt: Tensor,  # shape: [batch size, src_seq_length]
+        tgt: Tensor,  # shape: [batch size, src_seq_length, d_model == embedding_dim]
         memory: Tensor,  # shape: [batch size, source_size, d_model], e.g. source_size is equal to 1 in VarNaming
         tgt_mask: Optional[Tensor] = None,  # shape: [src_seq_length, src_seq_length]
         memory_mask: Optional[Tensor] = None,  # shape: [source_size, src_seq_length]
@@ -76,7 +65,7 @@ class GraphTransformerDecoder(pl.LightningModule):
     ) -> Tensor:  # shape: [batch size, src_seq_length, target vocabulary dim]
         return self.generator(
             self.decoder(
-                tgt=self.positional_encoding(self.tgt_tok_emb(tgt)),
+                tgt=self.positional_encoding(tgt),
                 memory=memory,
                 tgt_mask=tgt_mask,
                 memory_mask=memory_mask,
