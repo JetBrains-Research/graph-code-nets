@@ -91,4 +91,4 @@ class TokenEmbedding(nn.Module):
         self.embedding_dim = embedding_dim
 
     def forward(self, tokens: Tensor) -> Tensor:  # type: ignore
-        return self.embedding(tokens.long()) * math.sqrt(self.embedding_dim)
+        return self.embedding(tokens).mul_(math.sqrt(self.embedding_dim))
