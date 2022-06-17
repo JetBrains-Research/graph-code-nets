@@ -64,11 +64,8 @@ class VarNamingModel(pl.LightningModule):
     def forward(self, batch: Batch) -> Tensor:  # type: ignore
         # batch.x shape: [num_nodes in batch, src_seq_length]
 
-        # shape: [num_nodes in batch, src_seq_length, embedding_dim]
-        x_embedding = self.node_embedding(batch.x)  # type: ignore
-
         # shape: [num_nodes in batch, embedding_dim]
-        x_mean_embedding = torch.mean(x_embedding, dim=1)
+        batch.x = torch.mean(self.node_embedding(batch.x), dim=1)
 
         if self.config["model"]["encoder"] == "gcn":
             # shape: [num_nodes in batch, out_channels]
