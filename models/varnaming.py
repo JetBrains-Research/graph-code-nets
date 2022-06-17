@@ -67,8 +67,8 @@ class VarNamingModel(pl.LightningModule):
         # shape: [num_nodes in batch, src_seq_length, embedding_dim]
         x_embedding = self.node_embedding(batch.x)  # type: ignore
 
-        # shape: [batch size, embedding_dim]
-        x_mean_embedding = torch_scatter.scatter_mean(x_embedding, batch.batch, dim=1)
+        # shape: [num_nodes in batch, embedding_dim]
+        x_mean_embedding = torch.mean(x_embedding, dim=1)
 
         if self.config["model"]["encoder"] == "gcn":
             # shape: [num_nodes in batch, out_channels]
