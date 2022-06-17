@@ -14,14 +14,18 @@ from models.varnaming import VarNamingModel
 
 
 def main():
-    if len(sys.argv) < 3:
-        raise ValueError("Expecting test/validate and ckpt_path")
+    if len(sys.argv) < 4:
+        raise ValueError(
+            "Expecting test/validate, dataset type (train/validation/test), ckpt_path"
+        )
 
     test_or_validation = sys.argv[1]
     if test_or_validation not in ["test", "validation"]:
         raise ValueError(f"Unexpected test_or_validate: {test_or_validation}")
 
-    ckpt_path = sys.argv[2]
+    dataset_type = sys.argv[2]
+
+    ckpt_path = sys.argv[3]
 
     config_path = "config_varnaming.yaml"
 
@@ -46,10 +50,17 @@ def main():
         raise ValueError(f'Unknown vocabulary type: {config["vocabulary"]["type"]}')
 
     datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
-    if test_or_validation == "test":
+    if dataset_type == "test":
         datamodule.setup("test")
-    else:
+        dataloader = datamodule.test_dataloader()
+    elif dataset_type == "validation":
         datamodule.setup("fit")
+        dataloader = datamodule.val_dataloader()
+    elif dataset_type == "train":
+        datamodule.setup("fit")
+        dataloader = datamodule.train_dataloader()
+    else:
+        raise ValueError(f"Unknown dataset type: {dataset_type}")
 
     model = VarNamingModel.load_from_checkpoint(
         checkpoint_path=ckpt_path, config=config, vocabulary=vocabulary
@@ -58,9 +69,9 @@ def main():
     trainer = pl.Trainer(**config["trainer"], logger=logger)
 
     if test_or_validation == "test":
-        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+        trainer.test(model=model, dataloaders=dataloader, ckpt_path=ckpt_path)
     else:
-        trainer.validate(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+        trainer.validate(model=model, dataloaders=dataloader, ckpt_path=ckpt_path)
 
 
 if __name__ == "__main__":

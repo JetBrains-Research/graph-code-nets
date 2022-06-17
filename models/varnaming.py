@@ -62,17 +62,17 @@ class VarNamingModel(pl.LightningModule):
                 self.max_token_length
             ).to(self.device)
             if self.debug:
-                with open('test_log.z', 'a') as f:
-                    f.write(f'forward mask: {target_mask}\n')
+                with open("test_log.z", "a") as f:
+                    f.write(f"forward mask: {target_mask}\n")
 
             # TODO: investigate if this mask has any effect
             target_padding_mask = generate_padding_mask(
                 target_batch, self.vocabulary.pad_id(), device=self.device
             )
             if self.debug:
-                with open('test_log.z', 'a') as f:
-                    f.write(f'forward target_batch: {target_batch[:, :7]}\n')
-                    f.write(f'forward padding: {target_padding_mask[:, :7]}\n')
+                with open("test_log.z", "a") as f:
+                    f.write(f"forward target_batch: {target_batch[:, :7]}\n")
+                    f.write(f"forward padding: {target_padding_mask[:, :7]}\n")
 
             predicted = self.decoder(
                 target_batch,  # shape: [batch size, src_seq_length]
@@ -210,8 +210,8 @@ class VarNamingModel(pl.LightningModule):
                             current_state.size(1)
                         ).to(self.device)
                         if self.debug:
-                            with open('test_log.z', 'a') as f:
-                                f.write(f'beam search mask: {target_mask}\n')
+                            with open("test_log.z", "a") as f:
+                                f.write(f"beam search mask: {target_mask}\n")
 
                         # shape: (1, length, target_vocabulary_size)
                         predicted = self.decoder(
@@ -361,7 +361,9 @@ class VarNamingModel(pl.LightningModule):
         mrr_exact_k /= input_t.shape[0]
         if self.debug:
             with open("test_log.z", "a") as f:
-                f.write(f"metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n")
+                f.write(
+                    f"metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n"
+                )
 
         self.log(
             "chrf",
