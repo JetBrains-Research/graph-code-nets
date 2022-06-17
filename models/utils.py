@@ -3,7 +3,7 @@ import random
 
 import numpy as np
 import torch
-from torch import nn
+from torch import nn, Tensor
 
 
 def generate_padding_mask(src_or_tgt, pad_id, device):
