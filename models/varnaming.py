@@ -69,7 +69,7 @@ class VarNamingModel(pl.LightningModule):
 
         if self.config["model"]["encoder"] == "gcn":
             # shape: [num_nodes in batch, out_channels]
-            varname_batch: torch.Tensor = self.encoder(x_mean_embedding, batch.edge_index)  # type: ignore
+            varname_batch: torch.Tensor = self.encoder(batch.x, batch.edge_index)  # type: ignore
 
             # shape: [batch, 1, out_channels]
             varname_batch = torch_scatter.scatter_mean(
