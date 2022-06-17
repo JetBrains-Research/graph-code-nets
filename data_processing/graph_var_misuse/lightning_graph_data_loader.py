@@ -35,7 +35,7 @@ class GraphDataModule(pl.LightningDataModule):
                 mode="dev_small",
             )
 
-        if stage == "test" or stage is None:
+        if stage == "eval" or stage is None:
             self._test = GraphDataset(
                 data_path=self._data_path,
                 vocabulary=self._vocabulary,

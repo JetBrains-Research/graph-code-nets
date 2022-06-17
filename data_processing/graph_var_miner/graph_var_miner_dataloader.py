@@ -48,8 +48,8 @@ class GraphVarMinerModule(pl.LightningDataModule):
             self._setup_dataset("train")
             self._setup_dataset("validation")
 
-        if stage == "test" or stage is None:
-            self._setup_dataset("test")
+        if stage == "eval" or stage is None:
+            self._setup_dataset("eval")
 
     def _get_dataloader(self, mode: str):
         dataset = getattr(self, f"_{mode}")
@@ -64,4 +64,4 @@ class GraphVarMinerModule(pl.LightningDataModule):
         return self._get_dataloader("validation")
 
     def test_dataloader(self) -> DataLoader:
-        return self._get_dataloader("test")
+        return self._get_dataloader("eval")

@@ -1,6 +1,6 @@
 model_name: "baseline_model"
-mode: "fit"
-use_holdout: True
+mode: "holdout"
+use_holdout: False
 logger:
   project: "graph-nets-eval"
   entity: "scaling-graph-nets"
@@ -12,31 +12,15 @@ paths:
 model:
   configuration: "gatv2conv"
   base:
-    hidden_dim: 512
+    hidden_dim: 32
     dropout_rate: 0.1
     num_edge_types: 13
-    edge_attr_dim: 32
-  rnn:
-    num_layers: 8
-    typed_edges: False
-  ggnn:
-    num_layers: 8
-    typed_edges: False
-  gcn:
-    num_layers: 8
-    typed_edges: False
-  rggnn:
-    num_layers: 8
-    typed_edges: False
+    edge_attr_dim: 8
   gatv2conv:
-    num_layers: 8
-    typed_edges: True
-  myggnn:
-    num_layers: 8
+    num_layers: 4
     typed_edges: True
 data:
-  batch_size: 1024 # In samples
-  holdout_batch_size: 256
+  batch_size: 128 # In samples
   max_sequence_length: 512
   drop_sequence_length: 512
   max_token_length: 8  # In terms of (BPE) sub-tokens.
@@ -48,5 +32,5 @@ trainer:
   accelerator: "gpu"
   devices:
     - 3
-  max_epochs: 10
-  val_check_interval: 0.2
+  max_epochs: 2
+  val_check_interval: 1.

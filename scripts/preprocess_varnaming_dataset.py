@@ -63,7 +63,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "input_dataset_path",
-        help="Path to root dir of dataset, " "i.e. dir with train/ validation/ test/",
+        help="Path to root dir of dataset, " "i.e. dir with train/ validation/ eval/",
     )
     parser.add_argument(
         "output_dataset_path",

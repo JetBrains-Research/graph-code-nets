@@ -11,7 +11,7 @@ from models import (
 )
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
-from torch_geometric.data import Data
+from torch_geometric.data import Data, Batch
 from models.utils import (
     sparse_categorical_accuracy,
     sparse_softmax_cross_entropy_with_logits,
@@ -28,6 +28,7 @@ class VarMisuseLayer(pl.LightningModule):
         self._training_config = config["training"]
         self._vocab_dim = vocab_dim
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._use_holdout = config["use_holdout"]
 
         self._embedding = torch.nn.Embedding(
             self._vocab_dim, self._model_config["base"]["hidden_dim"]
@@ -106,15 +107,24 @@ class VarMisuseLayer(pl.LightningModule):
         return self._prediction(predictions)
 
     def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
+        if self._use_holdout:
+            with torch.no_grad():
+                loc_loss, target_loss = self.retrieve_per_sample_losses(batch)
+                total_loss = loc_loss + target_loss - batch.holdout_loss
+                top_candidates = torch.argsort(total_loss, descending=True)
+                picked_indices = top_candidates[:self._data_config["holdout_batch_size"]]
+                batch = Batch.from_data_list(batch[picked_indices])
+
         return self._shared_eval_step(batch, batch_idx, "train")
 
     def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        return self._shared_eval_step(batch, batch_idx, "val")
+        return self._shared_eval_step(batch, batch_idx, "dev")
 
     def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        return self._shared_eval_step(batch, batch_idx, "test")
+        return self._shared_eval_step(batch, batch_idx, "eval")
 
-    def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
+    def _get_forward_predictions(self, batch: Data) -> \
+            tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         batch_size = int(batch.batch[-1] + 1)
         pointer_preds = self(batch.x, batch.edge_index, batch.edge_attr, batch_size)
         pointer_preds_t = to_dense_batch(pointer_preds, batch.batch)[0]
@@ -129,6 +139,20 @@ class VarMisuseLayer(pl.LightningModule):
         is_buggy, loc_predictions, target_probs = self._shared_loss_acs_calc(
             pointer_preds_t, token_mask, error_loc, repair_targets, repair_candidates
         )
+
+        return is_buggy, loc_predictions, target_probs, error_loc
+
+    def retrieve_per_sample_losses(self, batch: Data) -> tuple[torch.Tensor, torch.Tensor]:
+        is_buggy, loc_predictions, target_probs, error_locations = self._get_forward_predictions(batch)
+        loc_loss = sparse_softmax_cross_entropy_with_logits(
+            error_locations, loc_predictions
+        )
+        target_loss = is_buggy * -torch.log(target_probs + 1e-9)
+        return loc_loss, target_loss
+
+    def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
+        is_buggy, loc_predictions, target_probs, error_loc = self._get_forward_predictions(batch)
+
         losses = self.test_get_losses(
             is_buggy, loc_predictions, target_probs, error_loc
         )

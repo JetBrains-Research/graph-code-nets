@@ -15,10 +15,10 @@ from models.varnaming import VarNamingModel
 
 def main():
     if len(sys.argv) < 3:
-        raise ValueError("Expecting test/validate and ckpt_path")
+        raise ValueError("Expecting eval/validate and ckpt_path")
 
     test_or_validation = sys.argv[1]
-    if test_or_validation not in ["test", "validation"]:
+    if test_or_validation not in ["eval", "validation"]:
         raise ValueError(f"Unexpected test_or_validate: {test_or_validation}")
 
     ckpt_path = sys.argv[2]
@@ -46,8 +46,8 @@ def main():
         raise ValueError(f'Unknown vocabulary type: {config["vocabulary"]["type"]}')
 
     datamodule = GraphVarMinerModule(config, vocabulary, logger=logger)
-    if test_or_validation == "test":
-        datamodule.setup("test")
+    if test_or_validation == "eval":
+        datamodule.setup("eval")
     else:
         datamodule.setup("fit")
 
@@ -57,7 +57,7 @@ def main():
 
     trainer = pl.Trainer(**config["trainer"], logger=logger)
 
-    if test_or_validation == "test":
+    if test_or_validation == "eval":
         trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
     else:
         trainer.validate(model=model, datamodule=datamodule, ckpt_path=ckpt_path)

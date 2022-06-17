@@ -315,9 +315,9 @@ class VarNamingModel(pl.LightningModule):
         return loss
 
     def test_step(self, batch: Batch, batch_idx: int) -> STEP_OUTPUT:  # type: ignore
-        _, loss = self._shared_step(batch, batch_idx, "test")
-        generated = self._generate_step(batch, batch_idx, "test")
-        self._log_metrics(batch, generated, batch_idx, "test")
+        _, loss = self._shared_step(batch, batch_idx, "eval")
+        generated = self._generate_step(batch, batch_idx, "eval")
+        self._log_metrics(batch, generated, batch_idx, "eval")
         return loss
 
     def configure_optimizers(self):

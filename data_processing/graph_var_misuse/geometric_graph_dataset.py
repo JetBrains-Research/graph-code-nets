@@ -1,5 +1,7 @@
 import os
 import json
+from typing import Optional
+
 import numpy as np
 import torch
 from torch_geometric.data import Dataset, Data
@@ -37,7 +39,7 @@ class GraphDataset(Dataset):
         debug: bool = False,
     ):
         super().__init__()
-        self._data_path = os.path.join(data_path, mode)
+        self._data_path = data_path
         self._vocabulary = vocabulary
         self._config = config
         self._mode = mode
@@ -46,19 +48,25 @@ class GraphDataset(Dataset):
         self._pref_sum_lines = get_files_count_lines(self._data_path)
         self._length = self._pref_sum_lines[-1]
 
+        self._use_holdout = config["use_holdout"]
+        if self._use_holdout and mode == "train":
+            self._holdout_losses = torch.tensor(np.load(config["paths"]["holdout_losses"]))
+
     def len(self) -> int:
         return self._length
 
     def get(self, index: int) -> Data:
         file_index, line_index = get_file_index(self._pref_sum_lines, index)
         file_offset = self._files_offsets[file_index][line_index]
+        holdout_loss = self._holdout_losses[index] if self._use_holdout and self._mode == "train" else None
         return self.process_line(
             get_line_by_offset(
                 os.path.join(self._data_path, self._data_files[file_index]), file_offset
-            )
+            ),
+            holdout_loss=holdout_loss
         )
 
-    def _parse_line(self, json_data: dict) -> Data:
+    def _parse_line(self, json_data: dict, holdout_loss: Optional[float]) -> Data:
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
         def _parse_edges(edges: list) -> tuple[torch.tensor, torch.tensor]:
             _edge_index = [[rel[0] for rel in edges], [rel[1] for rel in edges]]
@@ -122,8 +130,11 @@ class GraphDataset(Dataset):
             ],
             1,
         )
-        return_data = Data(tokens, edge_index=edge_index, edge_attr=edge_attr, y=labels)
+        if holdout_loss is not None:
+            return_data = Data(tokens, edge_index=edge_index, edge_attr=edge_attr, y=labels, holdout_loss=holdout_loss)
+        else:
+            return_data = Data(tokens, edge_index=edge_index, edge_attr=edge_attr, y=labels)
         return return_data
 
-    def process_line(self, line: str) -> Data:
-        return self._parse_line(json.loads(line))
+    def process_line(self, line: str, holdout_loss=Optional[float]) -> Data:
+        return self._parse_line(json.loads(line), holdout_loss)

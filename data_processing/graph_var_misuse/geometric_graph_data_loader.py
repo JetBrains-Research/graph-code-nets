@@ -19,33 +19,32 @@ class GraphDataModule(pl.LightningDataModule):
         pass
 
     def setup(self, stage: str = None) -> None:
-        if stage == "fit" or stage is None:
-            self._train = GraphDataset(
-                data_path=self._data_path,
+        def dataset(folder, mode):
+            return GraphDataset(
+                data_path=os.path.join(self._data_path, folder),
                 vocabulary=self._vocabulary,
                 config=self._config,
-                mode="processed_train",
-            )
-            self._val = GraphDataset(
-                data_path=self._data_path,
-                vocabulary=self._vocabulary,
-                config=self._config,
-                mode="processed_dev",
+                mode=mode,
             )
 
-        if stage == "test" or stage is None:
-            self._test = GraphDataset(
-                data_path=self._data_path,
-                vocabulary=self._vocabulary,
-                config=self._config,
-                mode="processed_eval",
-            )
+        if stage == "fit" or stage is None:
+            self._train = dataset("processed_train", "train")
+            self._val = dataset("processed_dev", "dev")
+
+        if stage == "holdout":
+            self._train = dataset("processed_holdout", "train")
+            self._val = dataset("processed_dev", "dev")
+            self._test = dataset("processed_train", "eval")
+
+        if stage == "eval" or stage is None:
+            self._test = dataset("processed_eval", "eval")
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self._train,
             batch_size=self._config["data"]["batch_size"],
             num_workers=8,
+            shuffle=True
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -53,6 +52,7 @@ class GraphDataModule(pl.LightningDataModule):
             self._val,
             batch_size=self._config["data"]["batch_size"],
             num_workers=8,
+            shuffle=False
         )
 
     def test_dataloader(self) -> DataLoader:
@@ -60,4 +60,5 @@ class GraphDataModule(pl.LightningDataModule):
             self._test,
             batch_size=self._config["data"]["batch_size"],
             num_workers=8,
+            shuffle=False
         )

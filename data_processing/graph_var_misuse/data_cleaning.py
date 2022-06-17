@@ -4,7 +4,7 @@ import os
 import yaml
 
 filename_pref = "processed_"
-dirs_to_process = ["train", "dev", "eval"]
+dirs_to_process = ["train", "dev", "eval", "holdout"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("config_path")

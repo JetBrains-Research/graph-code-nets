@@ -79,10 +79,10 @@ class VarMisuseLayer(pl.LightningModule):
         return self._shared_eval_step(batch, batch_idx, "train_small")
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        return self._shared_eval_step(batch, batch_idx, "val")
+        return self._shared_eval_step(batch, batch_idx, "dev")
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
-        return self._shared_eval_step(batch, batch_idx, "test")
+        return self._shared_eval_step(batch, batch_idx, "eval")
 
     def _shared_eval_step(
         self, batch: torch.Tensor, batch_idx: int, step: str
