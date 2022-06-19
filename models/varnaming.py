@@ -32,6 +32,9 @@ class VarNamingModel(pl.LightningModule):
 
         self.debug = config["model"].get("debug") or False
 
+        if self.debug:
+            torch.autograd.set_detect_anomaly(True)
+
         self.embedding_dim = self.config["model"]["embedding"]["embedding_dim"]
 
         self.node_embedding = TokenEmbedding(
