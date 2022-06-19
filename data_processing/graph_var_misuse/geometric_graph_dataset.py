@@ -43,7 +43,7 @@ class GraphDataset(Dataset):
         self._vocabulary = vocabulary
         self._config = config
         self._mode = mode
-        self._data_files = os.listdir(self._data_path)
+        self._data_files = sorted(os.listdir(self._data_path))
         self._files_offsets = get_files_offsets(self._data_path, debug)
         self._pref_sum_lines = get_files_count_lines(self._data_path)
         self._length = self._pref_sum_lines[-1]
