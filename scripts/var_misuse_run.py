@@ -54,7 +54,7 @@ if config["mode"] == "holdout":
     print("Running holdout loss computation")
     for batch in tqdm(data.test_dataloader()):
         with torch.no_grad():
-            loc_loss, target_loss = model.retrieve_per_sample_losses(batch)
+            loc_loss, target_loss, _ = model.retrieve_per_sample_losses(batch)
             total_loss = loc_loss + target_loss
             all_losses.extend(total_loss)
 

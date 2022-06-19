@@ -109,10 +109,19 @@ class VarMisuseLayer(pl.LightningModule):
     def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         if self._use_holdout:
             with torch.no_grad():
-                loc_loss, target_loss = self.retrieve_per_sample_losses(batch)
+                loc_loss, target_loss, is_buggy = self.retrieve_per_sample_losses(batch)
+                n_buggy = is_buggy.sum() * self._data_config["holdout_batch_size"] // self._data_config["batch_size"]
+                n_non_buggy = self._data_config["holdout_batch_size"] - n_buggy
                 total_loss = loc_loss + target_loss - batch.holdout_loss
                 top_candidates = torch.argsort(total_loss, descending=True)
-                picked_indices = top_candidates[:self._data_config["holdout_batch_size"]]
+                picked_indices = []
+                for ind, buggy in zip(top_candidates, is_buggy):
+                    if buggy and n_buggy > 0:
+                        picked_indices.append(ind)
+                        n_buggy -= 1
+                    if not buggy and n_non_buggy > 0:
+                        picked_indices.append(ind)
+                        n_non_buggy -= 1
                 batch = Batch.from_data_list(batch[picked_indices])
 
         return self._shared_eval_step(batch, batch_idx, "train")
@@ -142,13 +151,13 @@ class VarMisuseLayer(pl.LightningModule):
 
         return is_buggy, loc_predictions, target_probs, error_loc
 
-    def retrieve_per_sample_losses(self, batch: Data) -> tuple[torch.Tensor, torch.Tensor]:
+    def retrieve_per_sample_losses(self, batch: Data) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         is_buggy, loc_predictions, target_probs, error_locations = self._get_forward_predictions(batch)
         loc_loss = sparse_softmax_cross_entropy_with_logits(
             error_locations, loc_predictions
         )
         target_loss = is_buggy * -torch.log(target_probs + 1e-9)
-        return loc_loss, target_loss
+        return loc_loss, target_loss, is_buggy
 
     def _shared_eval_step(self, batch: Data, batch_idx: int, step: str) -> torch.Tensor:
         is_buggy, loc_predictions, target_probs, error_loc = self._get_forward_predictions(batch)
