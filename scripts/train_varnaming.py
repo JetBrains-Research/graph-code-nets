@@ -4,6 +4,7 @@ import sys
 import time
 
 import pytorch_lightning as pl
+import torch
 
 import yaml
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -65,14 +66,18 @@ def main():
         checkpoint_dirpath = os.path.dirname(ckpt_path)
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_dirpath,
-        save_top_k=int(config["checkpoint"]["top_k"]),
+        every_n_epochs=1,
+        save_last=True,
+        save_top_k=-1, # int(config["checkpoint"]["top_k"]),
         monitor="validation_loss",
     )
 
     trainer = pl.Trainer(
         **config["trainer"], callbacks=[checkpoint_callback], logger=logger
     )
-    trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
+    # print(trainer.tuner.lr_find(model, datamodule=datamodule).suggestion())
+    with torch.autograd.detect_anomaly():
+        trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
     print("Best model: ", checkpoint_callback.best_model_path)
     print(f"Top {checkpoint_callback.save_top_k}: {checkpoint_callback.best_k_models}")

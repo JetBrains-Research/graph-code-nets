@@ -5,18 +5,18 @@ model:
   encoder: "gcn"
   decoder: "transformer_decoder"
   embedding:
-    embedding_dim: 512
+    embedding_dim: 128
   gcn:
-    out_channels: 512
+    out_channels: 128
     hidden_channels: 64
     num_layers: 6
   transformer_decoder:
     num_layers: 6
-    d_model: 512
+    d_model: 128
     dim_feedforward: 2048
     nhead: 8
     dropout: 0.1
-  debug: False
+  debug: True
 
 vocabulary:
   type: 'spm'
@@ -28,18 +28,20 @@ data:
   link: 'https://drive.google.com/u/0/uc?id=1GcpIFH5wD7TTnaemtdy7ieMaSK2T8HN2'
   cache_in_ram: False  # if True, must be used with dataloader.persistent_workers: True
   preprocessed: True  # with scripts/preprocess_varnaming_dataset.py
-  max_node_count: 5000  # 0.9972 percentile; bigger graphs could cause OOM and will be ignored
+  max_node_count: 300  # 300: 0.52 percentile, 5000: 0.9972 percentile; bigger graphs could cause OOM and will be ignored
 
 trainer:
-  max_epochs: 2
+  max_epochs: 10
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 1
-  val_check_interval: 4800  # ~8 times per train epoch (< 2500000/batch_size/4)
+  val_check_interval: 600  # ~8 times per train epoch (< 2500000/batch_size/4)
   precision: 16
-  num_sanity_val_steps: 1
+  num_sanity_val_steps: 2
   auto_lr_find: True
   gradient_clip_val: 1.0
+  limit_test_batches: 5800  # no more than test dataset size (e.g. for launching test() on train dataset)
+  accumulate_grad_batches: 1
 
 checkpoint:
   dir: 'checkpoints'
@@ -50,10 +52,12 @@ logger:  # wandb is used
   entity: 'scaling-graph-nets'
 
 train:
-  learning_rate: 0.0001
+  learning_rate: 0.001
+  lr_decay_gamma: 0.95
 
   dataset:
     debug: True
+    make_small: 0.1
 
   dataloader:
     batch_size: 64
@@ -65,6 +69,7 @@ train:
 validation:
   dataset:
     debug: True
+    make_small: 0.1
 
   dataloader:
     batch_size: 64
@@ -78,7 +83,7 @@ validation:
 
 test:
   dataset:
-    debug: False
+    debug: True
 
   dataloader:
     batch_size: 64
