@@ -4,7 +4,6 @@ import sys
 import time
 
 import pytorch_lightning as pl
-import torch
 
 import yaml
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -76,7 +75,7 @@ def main():
         **config["trainer"], callbacks=[checkpoint_callback], logger=logger
     )
     # print(trainer.tuner.lr_find(model, datamodule=datamodule).suggestion())
-    with torch.autograd.detect_anomaly():
+    with torch.autograd.set_detect_anomaly(True):
         trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
     print("Best model: ", checkpoint_callback.best_model_path)

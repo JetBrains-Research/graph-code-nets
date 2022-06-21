@@ -35,7 +35,7 @@ trainer:
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 1
-  val_check_interval: 600  # ~8 times per train epoch (< 2500000/batch_size/4)
+  val_check_interval: 9600  # ~8 times per train epoch (< 2500000/batch_size/4)
   precision: 16
   num_sanity_val_steps: 2
   auto_lr_find: True
@@ -57,7 +57,6 @@ train:
 
   dataset:
     debug: True
-    make_small: 0.1
 
   dataloader:
     batch_size: 64
@@ -69,7 +68,6 @@ train:
 validation:
   dataset:
     debug: True
-    make_small: 0.1
 
   dataloader:
     batch_size: 64
