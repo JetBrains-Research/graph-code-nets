@@ -15,7 +15,9 @@ from torch_geometric.utils import to_dense_batch
 from torch.optim.lr_scheduler import ExponentialLR
 
 from data_processing.vocabulary.vocabulary import Vocabulary
+from models.encoder_gatv2conv import GATv2ConvEncoder
 from models.encoder_gcn import GCNEncoder
+from models.encoder_ggnn import EncoderGGNN
 from models.transformer_decoder import GraphTransformerDecoder
 from models.utils import generate_padding_mask, fix_seed, TokenEmbedding
 
@@ -36,13 +38,20 @@ class VarNamingModel(pl.LightningModule):
 #        if self.debug:
 #            torch.autograd.set_detect_anomaly(True)
 
-        self.embedding_dim = self.config["model"]["embedding"]["embedding_dim"]
+        self.node_embedding_dim = self.config["model"]["node_embedding"]["embedding_dim"]
+        # self.edge_embedding_dim = self.config["model"]["edge_embedding"]["embedding_dim"]
 
         self.node_embedding = TokenEmbedding(
             vocab_size=len(self.vocabulary),
             padding_idx=self.vocabulary.pad_id(),
-            **self.config["model"]["embedding"],
+            **self.config["model"]["node_embedding"],
         )
+
+        # self.edge_embedding = TokenEmbedding(
+        #     vocab_size=
+        #     self._model_config["base"]["num_edge_types"],
+        #     self._model_config["base"]["edge_attr_dim"],
+        # )
 
         encoder_config = self.config["model"][self.config["model"]["encoder"]]
         if self.config["model"]["encoder"] == "gcn":
@@ -50,6 +59,15 @@ class VarNamingModel(pl.LightningModule):
                 **encoder_config,
                 in_channels=self.embedding_dim,
             )  # torch_geometric.data.Data -> torch.Tensor [num_nodes, d_model]
+        # elif self.config["model"]["encoder"] == "gatv2conv":
+        #     self._model = GATv2ConvEncoder(
+        #         **encoder_config,
+        #         in_channels=self.embedding_dim,
+        #     )
+        elif self.config["model"]["encoder"] == "ggnn":
+            self._model = EncoderGGNN(
+                encoder_config
+            )
         else:
             raise ValueError(f"Unknown encoder type: {self.config['model']['encoder']}")
 
@@ -63,7 +81,7 @@ class VarNamingModel(pl.LightningModule):
         else:
             raise ValueError(f"Unknown decoder type: {self.config['model']['decoder']}")
 
-        self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=vocabulary.pad_id())
+        self.loss_fn = torch.nn.CrossEntropyLoss()
 
     def forward(self, batch: Batch) -> Tensor:  # type: ignore
         assert not torch.any(torch.isnan(batch.x)).item()
@@ -78,13 +96,13 @@ class VarNamingModel(pl.LightningModule):
 
         # shape: [num_nodes in batch, embedding_dim]
         batch_x_mean = torch.mean(self.node_embedding(batch.x), dim=1)
-        
+
         if self.debug:
             with open('test_log.z', 'a') as f:
                 f.write(f'batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n')
 
 
-        if self.config["model"]["encoder"] == "gcn":
+        if self.config["model"]["encoder"] in ["gcn", "ggnn"]:
             # shape: [num_nodes in batch, out_channels]
             varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index)  # type: ignore
             if self.debug:
@@ -101,49 +119,49 @@ class VarNamingModel(pl.LightningModule):
             else:
                 raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
     
-            if self.config["model"]["decoder"] == "transformer_decoder":
-                target_batch = batch.name  # shape: [batch size, src_seq_length]
-    
-                target_mask = Transformer.generate_square_subsequent_mask(
-                    self.max_token_length
-                ).to(self.device)
-                if self.debug:
-                    with open("test_log.z", "a") as f:
-                        f.write(f"forward mask: {target_mask}\n")
-    
-                # TODO: investigate if this mask has any effect
-                target_padding_mask = generate_padding_mask(
-                    target_batch, self.vocabulary.pad_id(), device=self.device
-                )
-    
-                target_batch = self.node_embedding(
-                    target_batch
-                )  # shape: [batch size, src_seq_length, embedding_dim]
-    
-                if self.debug:
-                    with open("test_log.z", "a") as f:
-                        f.write(f"forward target_batch: {target_batch[:, :7]}\n")
-                        f.write(f"forward padding: {target_padding_mask[:, :7]}\n")
+        if self.config["model"]["decoder"] == "transformer_decoder":
+            target_batch = batch.name  # shape: [batch size, src_seq_length]
 
-                assert torch.all(torch.any(torch.logical_not(target_padding_mask), dim=1)).item()
-    
-                predicted = self.decoder(
-                    target_batch,  # shape: [batch size, src_seq_length, embedding_dim]
-                    varname_batch,  # shape: [batch size, 1, d_model]
-                    tgt_mask=target_mask,  # shape: [src_seq_length, src_seq_length]
-                    tgt_key_padding_mask=target_padding_mask,  # shape: [batch size, src_seq_length]
-                )  # shape: [batch size, src_seq_length, target vocabulary dim]
+            target_mask = Transformer.generate_square_subsequent_mask(
+                self.max_token_length
+            ).to(self.device)
+            if self.debug:
+                with open("test_log.z", "a") as f:
+                    f.write(f"forward mask: {target_mask}\n")
 
-    
-                if self.debug:
-                    with open('test_log.z', 'a') as f:
-                        f.write(f'Predicted: {predicted.shape} {predicted}\n')
-                # TODO understand why there could be nan-s
-                # assert not torch.any(torch.isnan(predicted)).item()
-                
-                return predicted
-            else:
-                raise ValueError(f"Unknown decoder type: {self.config['model']['decoder']}")
+            # TODO: investigate if this mask has any effect
+            target_padding_mask = generate_padding_mask(
+                target_batch, self.vocabulary.pad_id(), device=self.device
+            )
+
+            target_batch = self.node_embedding(
+                target_batch
+            )  # shape: [batch size, src_seq_length, embedding_dim]
+
+            if self.debug:
+                with open("test_log.z", "a") as f:
+                    f.write(f"forward target_batch: {target_batch[:, :7]}\n")
+                    f.write(f"forward padding: {target_padding_mask[:, :7]}\n")
+
+            assert torch.all(torch.any(torch.logical_not(target_padding_mask), dim=1)).item()
+
+            predicted = self.decoder(
+                target_batch,  # shape: [batch size, src_seq_length, embedding_dim]
+                varname_batch,  # shape: [batch size, 1, d_model]
+                tgt_mask=target_mask,  # shape: [src_seq_length, src_seq_length]
+                tgt_key_padding_mask=target_padding_mask,  # shape: [batch size, src_seq_length]
+            )  # shape: [batch size, src_seq_length, target vocabulary dim]
+
+
+            if self.debug:
+                with open('test_log.z', 'a') as f:
+                    f.write(f'Predicted: {predicted.shape} {predicted}\n')
+            # TODO understand why there could be nan-s
+            # assert not torch.any(torch.isnan(predicted)).item()
+
+            return predicted
+        else:
+            raise ValueError(f"Unknown decoder type: {self.config['model']['decoder']}")
 
     @torch.no_grad()
     def generate(
@@ -162,7 +180,7 @@ class VarNamingModel(pl.LightningModule):
 
         # shape: [num_nodes in batch, embedding_dim]
         batch_x_mean = torch.mean(self.node_embedding(batch.x), dim=1)
-        
+
         if self.debug:
             with open('test_log.z', 'a') as f:
                 f.write(f'batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n')

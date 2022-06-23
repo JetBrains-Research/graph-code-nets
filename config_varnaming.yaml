@@ -2,14 +2,23 @@ seed: 1337
 
 model:
   # emnedding.embedding_dim, gcn.out_channels and transformer_decoder.d_model must be the same
-  encoder: "gcn"
+  encoder: "ggnn"
   decoder: "transformer_decoder"
-  embedding:
+  node_embedding:
+    embedding_dim: 128
+  edge_embedding:
     embedding_dim: 128
   gcn:
     out_channels: 128
     hidden_channels: 64
     num_layers: 6
+  gatv2conv:
+    hidden_channels: 128
+    num_layers: 8
+    edge_dim_: 1
+  ggnn:
+    hidden_dim: 128
+    num_layers: 8
   transformer_decoder:
     num_layers: 6
     d_model: 128
