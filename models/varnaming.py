@@ -12,6 +12,7 @@ from torch import Tensor
 from torch.nn import Transformer
 from torch_geometric.data import Batch
 from torch_geometric.utils import to_dense_batch
+from torch.optim.lr_scheduler import ExponentialLR
 
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.encoder_gcn import GCNEncoder
@@ -76,16 +77,16 @@ class VarNamingModel(pl.LightningModule):
                 f.write(f'batch.x: {batch.x.shape} {batch.x}\n')
 
         # shape: [num_nodes in batch, embedding_dim]
-        batch.x = torch.mean(self.node_embedding(batch.x), dim=1)
+        batch_x_mean = torch.mean(self.node_embedding(batch.x), dim=1)
         
         if self.debug:
             with open('test_log.z', 'a') as f:
-                f.write(f'batch.x.embedded: {batch.x.shape} {batch.x}\n')
+                f.write(f'batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n')
 
 
         if self.config["model"]["encoder"] == "gcn":
             # shape: [num_nodes in batch, out_channels]
-            varname_batch: torch.Tensor = self.encoder(batch.x, batch.edge_index)  # type: ignore
+            varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index)  # type: ignore
             if self.debug:
                 with open('test_log.z', 'a') as f:
                     f.write(f'varname_batch: {varname_batch.shape} {varname_batch}\n')
@@ -160,16 +161,16 @@ class VarNamingModel(pl.LightningModule):
                 f.write(f'batch.x: {batch.x.shape} {batch.x}\n')
 
         # shape: [num_nodes in batch, embedding_dim]
-        batch.x = torch.mean(self.node_embedding(batch.x), dim=1)
+        batch_x_mean = torch.mean(self.node_embedding(batch.x), dim=1)
         
         if self.debug:
             with open('test_log.z', 'a') as f:
-                f.write(f'batch.x.embedded: {batch.x.shape} {batch.x}\n')
+                f.write(f'batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n')
 
 
         if self.config["model"]["encoder"] == "gcn":
             # shape: [num_nodes in batch, out_channels]
-            varname_batch: torch.Tensor = self.encoder(batch.x, batch.edge_index)  # type: ignore
+            varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index)  # type: ignore
             if self.debug:
                 with open('test_log.z', 'a') as f:
                     f.write(f'varname_batch: {varname_batch.shape} {varname_batch}\n')
@@ -187,16 +188,19 @@ class VarNamingModel(pl.LightningModule):
         if self.config["model"]["decoder"] == "transformer_decoder":
             if method == "greedy":
                 current = torch.ones(
-                    (varname_batch.size(0), 1), device=self.device
+                    (varname_batch.size(0), 1), device=self.device, dtype=torch.int
                 ).fill_(self.vocabulary.bos_id())
 
                 for i in range(self.max_token_length - 2):  # bos + variable name + eos
                     target_mask = Transformer.generate_square_subsequent_mask(
                         current.size(1)
                     ).to(self.device)
+                    current_embed = self.node_embedding(
+                        current
+                    )  # shape: [batch size, src_seq_length, embedding_dim]
 
                     predicted = self.decoder(
-                        current, varname_batch, tgt_mask=target_mask
+                        current_embed, varname_batch, tgt_mask=target_mask
                     )
                     _, next_word_batch = torch.max(predicted[:, -1, :], dim=1)
                     if self.debug:
@@ -258,7 +262,7 @@ class VarNamingModel(pl.LightningModule):
                         b_i : b_i + 1, :
                     ]  # keep batch dimension
 
-                    current_state = torch.ones((1, 1), device=self.device).fill_(
+                    current_state = torch.ones((1, 1), device=self.device, dtype=torch.int).fill_(
                         self.vocabulary.bos_id()
                     )
 
@@ -306,9 +310,13 @@ class VarNamingModel(pl.LightningModule):
                             with open("test_log.z", "a") as f:
                                 f.write(f"beam search mask: {target_mask}\n")
 
+                        current_state_embed = self.node_embedding(
+                            current_state
+                        )  # shape: [batch size, src_seq_length, embedding_dim]
+
                         # shape: (1, length, target_vocabulary_size)
                         predicted = self.decoder(
-                            current_state, varname_batch_part, tgt_mask=target_mask
+                            current_state_embed, varname_batch_part, tgt_mask=target_mask
                         )
                         neg_log_prob_predicted = -F.log_softmax(predicted, dim=2)
                         top_scores, top_indices = torch.topk(
@@ -527,13 +535,14 @@ class VarNamingModel(pl.LightningModule):
 
     def configure_optimizers(self):
         # TODO add optimizer config
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             itertools.chain(self.encoder.parameters(), self.decoder.parameters()),
             lr=self.config["train"]["learning_rate"],
         )
-        # TODO lr_scheduler?
+        lr_scheduler = ExponentialLR(optimizer, gamma=0.9)
         return {
             "optimizer": optimizer,
+            "scheduler": lr_scheduler
         }
 
     # def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:  # type: ignore

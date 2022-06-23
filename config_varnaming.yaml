@@ -31,7 +31,7 @@ data:
   max_node_count: 300  # 300: 0.52 percentile, 5000: 0.9972 percentile; bigger graphs could cause OOM and will be ignored
 
 trainer:
-  max_epochs: 10
+  max_epochs: 20
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 1
@@ -53,7 +53,6 @@ logger:  # wandb is used
 
 train:
   learning_rate: 0.001
-  lr_decay_gamma: 0.95
 
   dataset:
     debug: True
