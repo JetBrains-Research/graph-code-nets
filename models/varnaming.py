@@ -100,7 +100,7 @@ class VarNamingModel(pl.LightningModule):
         else:
             raise ValueError(f"Unknown decoder type: {self.config['model']['decoder']}")
 
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=vocabulary.pad_id())
 
     def forward(self, batch: Batch) -> Tensor:  # type: ignore
         assert not torch.any(torch.isnan(batch.x)).item()
