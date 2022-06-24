@@ -38,8 +38,8 @@ class VarNamingModel(pl.LightningModule):
 
         self.debug = config["model"].get("debug") or False
 
-#        if self.debug:
-#            torch.autograd.set_detect_anomaly(True)
+        #        if self.debug:
+        #            torch.autograd.set_detect_anomaly(True)
 
         self.node_embedding_dim = self.config["model"]["node_embedding"]["embedding_dim"]
         # self.edge_embedding_dim = self.config["model"]["edge_embedding"]["embedding_dim"]
@@ -50,7 +50,8 @@ class VarNamingModel(pl.LightningModule):
             **self.config["model"]["node_embedding"],
         )
 
-        edge_embedding_dim = self.config["model"].get(self.config["model"]["encoder"])
+        encoder_config = self.config["model"][self.config["model"]["encoder"]]
+        edge_embedding_dim = encoder_config.get("edge_embedding_dim")
         if edge_embedding_dim is not None:
             self.edge_embedding = TokenEmbedding(
                 vocab_size=graph_var_miner.num_edge_types,
@@ -59,7 +60,6 @@ class VarNamingModel(pl.LightningModule):
         else:
             self.edge_embedding = None
 
-        encoder_config = self.config["model"][self.config["model"]["encoder"]]
         if self.config["model"]["encoder"] == "gcn":
             self.encoder = EncoderGCN(
                 in_channels=self.embedding_dim,
