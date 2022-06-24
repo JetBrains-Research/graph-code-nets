@@ -25,14 +25,19 @@ def change_dict(original_dict, vocabulary, max_token_length):
     return ret_dict
 
 
-def preprocess(files, vocabulary, max_token_length):
+def preprocess(files, vocabulary, max_token_length, max_node_count):
     file_from, file_to = files
     print(f"{file_from} -> {file_to}")
     gz_from = gzip.open(file_from, "rb")
     items_from = ijson.items(gz_from, "item")
 
     items_to = list(
-        map(lambda x: change_dict(x, vocabulary, max_token_length), items_from)
+        map(lambda x:
+            change_dict(x, vocabulary, max_token_length),
+            filter(lambda x:
+                   len(x["ContextGraph"]["NodeLabels"]) <= max_node_count if max_node_count != -1 else True,
+                   items_from)
+            )
     )
     json_to = json.dumps(items_to)
     with gzip.open(file_to, "wt") as gz_to:
@@ -49,6 +54,7 @@ def launch_preprocess(args, files, num):
         return
 
     max_token_length = args.max_token_length
+    max_node_count = args.max_node_count
 
     per_worker = int(math.ceil(len(files) / args.num_workers))
     files_start = num * per_worker
@@ -56,7 +62,7 @@ def launch_preprocess(args, files, num):
     files_slice = files[files_start:files_end].copy()
 
     for file in files_slice:
-        preprocess(file, vocabulary, max_token_length)
+        preprocess(file, vocabulary, max_token_length, max_node_count)
 
 
 def main():
@@ -78,6 +84,10 @@ def main():
     )
 
     parser.add_argument("num_workers", type=int)
+
+    parser.add_argument(
+        "max_node_count", type=float, help="Same as in config_varnaming.yaml"
+    )
 
     args = parser.parse_args()
 
