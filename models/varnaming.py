@@ -66,23 +66,23 @@ class VarNamingModel(pl.LightningModule):
                 **encoder_config,
             )  # torch_geometric.data.Data -> torch.Tensor [num_nodes, d_model]
         elif self.config["model"]["encoder"] == "gatv2conv":
-            self._model = EncoderGATv2Conv(
+            self.encoder = EncoderGATv2Conv(
                 in_channels=self.node_embedding_dim,
                 hidden_channels=encoder_config["hidden_channels"],
                 num_layers=encoder_config["num_layers"],
                 edge_attr_dim=self.edge_embedding_dim,
             )
         elif self.config["model"]["encoder"] == "ggnn":
-            self._model = EncoderGGNN(
+            self.encoder = EncoderGGNN(
                 **encoder_config
             )
         elif self.config["model"]["encoder"] == "rggnn":
-            self._model = EncoderRGGNN(
+            self.encoder = EncoderRGGNN(
                 in_channels=self.node_embedding_dim,
                 **encoder_config,
             )
         elif self.config["model"]["encoder"] == "myggnn":
-            self._model = EncoderMyGGNN(
+            self.encoder = EncoderMyGGNN(
                 hidden_dim=encoder_config["hidden_dim"],
                 num_layers=encoder_config["num_layers"],
                 edge_attr_dim=self.edge_embedding_dim,
