@@ -8,6 +8,7 @@ import torch
 
 import yaml
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 
 from data_processing.graph_var_miner.graph_var_miner_dataloader import (
@@ -71,9 +72,10 @@ def main():
         save_top_k=-1, # int(config["checkpoint"]["top_k"]),
         monitor="validation_loss",
     )
+    lr_monitor = LearningRateMonitor(logging_interval='step')
 
     trainer = pl.Trainer(
-        **config["trainer"], callbacks=[checkpoint_callback], logger=logger
+        **config["trainer"], callbacks=[checkpoint_callback, lr_monitor], logger=logger
     )
     # print(trainer.tuner.lr_find(model, datamodule=datamodule).suggestion())
     #with torch.autograd.set_detect_anomaly(True):
