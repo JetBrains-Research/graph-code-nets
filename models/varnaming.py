@@ -51,26 +51,26 @@ class VarNamingModel(pl.LightningModule):
         )
 
         encoder_config = self.config["model"][self.config["model"]["encoder"]]
-        edge_embedding_dim = encoder_config.get("edge_embedding_dim")
-        if edge_embedding_dim is not None:
+        self.edge_embedding_dim = encoder_config.get("edge_embedding_dim")
+        if self.edge_embedding_dim is not None:
             self.edge_embedding = TokenEmbedding(
                 vocab_size=graph_var_miner.num_edge_types,
-                embedding_dim=edge_embedding_dim,
+                embedding_dim=self.edge_embedding_dim,
             )
         else:
             self.edge_embedding = None
 
         if self.config["model"]["encoder"] == "gcn":
             self.encoder = EncoderGCN(
-                in_channels=self.embedding_dim,
+                in_channels=self.node_embedding_dim,
                 **encoder_config,
             )  # torch_geometric.data.Data -> torch.Tensor [num_nodes, d_model]
         elif self.config["model"]["encoder"] == "gatv2conv":
             self._model = EncoderGATv2Conv(
-                in_channels=self.embedding_dim,
+                in_channels=self.node_embedding_dim,
                 hidden_channels=encoder_config["hidden_channels"],
                 num_layers=encoder_config["num_layers"],
-                edge_attr_dim=edge_embedding_dim,
+                edge_attr_dim=self.edge_embedding_dim,
             )
         elif self.config["model"]["encoder"] == "ggnn":
             self._model = EncoderGGNN(
@@ -78,14 +78,14 @@ class VarNamingModel(pl.LightningModule):
             )
         elif self.config["model"]["encoder"] == "rggnn":
             self._model = EncoderRGGNN(
-                in_channels=self.embedding_dim,
+                in_channels=self.node_embedding_dim,
                 **encoder_config,
             )
         elif self.config["model"]["encoder"] == "myggnn":
             self._model = EncoderMyGGNN(
                 hidden_dim=encoder_config["hidden_dim"],
                 num_layers=encoder_config["num_layers"],
-                edge_attr_dim=edge_embedding_dim,
+                edge_attr_dim=self.edge_embedding_dim,
             )
         else:
             raise ValueError(f"Unknown encoder type: {self.config['model']['encoder']}")
