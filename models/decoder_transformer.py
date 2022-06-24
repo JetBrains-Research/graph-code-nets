@@ -24,7 +24,7 @@ class PositionalEncoding(nn.Module):
         return self.dropout(token_embedding + self.pos_embedding[:, : token_embedding.size(1), :])  # type: ignore
 
 
-class GraphTransformerDecoder(pl.LightningModule):
+class DecoderTransformer(pl.LightningModule):
     def __init__(
         self,
         d_model: int,

@@ -50,26 +50,29 @@ class VarMisuseLayer(pl.LightningModule):
         self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
         if inner_model == "rnn":
             self._model = encoder_gru.EncoderGRU(
-                join_dicts(base_config, self._model_config["rnn"])
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["ggnn"]["num_layers"],
+                self._model_config["ggnn"]["dropout_rate"],
             )
         elif inner_model == "ggnn":
             self._model = encoder_ggnn.EncoderGGNN(
-                join_dicts(base_config, self._model_config["ggnn"])
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["ggnn"]["num_layers"],
             )
         elif inner_model == "gcn":
-            self._model = encoder_gcn.GCNEncoder(
+            self._model = encoder_gcn.EncoderGCN(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gcn"]["num_layers"],
             )
         elif inner_model == "rggnn":
-            self._model = encoder_rggnn.RGGNNEncoder(
+            self._model = encoder_rggnn.EncoderRGGNN(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["rggnn"]["num_layers"],
             )
         elif inner_model == "gatv2conv":
-            self._model = encoder_gatv2conv.GATv2ConvEncoder(
+            self._model = encoder_gatv2conv.EncoderGATv2Conv(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gatv2conv"]["num_layers"],
@@ -77,7 +80,9 @@ class VarMisuseLayer(pl.LightningModule):
             )
         elif inner_model == "myggnn":
             self._model = encoder_myggnn.EncoderMyGGNN(
-                join_dicts(base_config, self._model_config["ggnn"])
+                self._model_config["base"]["hidden_dim"],
+                self._model_config["myggnn"]["num_layers"],
+                self._model_config["base"]["edge_attr_dim"],
             )
         else:
             raise ValueError("Unknown model component provided:", inner_model)

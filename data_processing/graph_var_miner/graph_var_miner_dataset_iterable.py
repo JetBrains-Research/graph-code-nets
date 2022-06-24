@@ -35,6 +35,8 @@ _graph_var_miner_edge_types_to_idx = dict(
     (name, i) for i, name in enumerate(_graph_var_miner_edge_types)
 )
 
+num_edge_types = len(_graph_var_miner_edge_types_to_idx)
+
 
 class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def __init__(
@@ -146,7 +148,7 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
             edge_index.extend(edges_typed_group[1])
             edge_attr.extend([edges_type] * len(edges_typed_group[1]))
         edge_index_t = torch.tensor(edge_index, device=self.device).t().contiguous()
-        edge_attr_t = torch.tensor(edge_attr, dtype=torch.float, device=self.device)
+        edge_attr_t = torch.tensor(edge_attr, dtype=torch.int, device=self.device)
 
         filename = dct["filename"]
         name = self._process_tokens([dct["name"]])

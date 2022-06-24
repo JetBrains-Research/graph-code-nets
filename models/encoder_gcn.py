@@ -6,9 +6,9 @@ from torch_geometric.nn import Sequential
 from torch_geometric.nn.conv import GCNConv
 
 
-class GCNEncoder(pl.LightningModule):
+class EncoderGCN(pl.LightningModule):
     def __init__(
-        self, in_channels, hidden_channels, num_layers, out_channels=None
+        self, in_channels: int, hidden_channels: int, num_layers: int, out_channels=None
     ) -> None:
         super().__init__()
         modules = []

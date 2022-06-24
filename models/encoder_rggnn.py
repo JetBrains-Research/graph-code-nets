@@ -6,8 +6,8 @@ from torch import Tensor
 import torch
 
 
-class RGGNNEncoder(pl.LightningModule):
-    def __init__(self, in_channels, hidden_channels, num_layers) -> None:
+class EncoderRGGNN(pl.LightningModule):
+    def __init__(self, in_channels: int, hidden_channels: int, num_layers: int) -> None:
         super().__init__()
         modules = []
         for i in range(num_layers):

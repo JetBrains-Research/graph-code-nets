@@ -14,11 +14,14 @@ from torch_geometric.data import Batch
 from torch_geometric.utils import to_dense_batch
 from torch.optim.lr_scheduler import ExponentialLR
 
+from data_processing import graph_var_miner
 from data_processing.vocabulary.vocabulary import Vocabulary
-from models.encoder_gatv2conv import GATv2ConvEncoder
-from models.encoder_gcn import GCNEncoder
+from models.encoder_gatv2conv import EncoderGATv2Conv
+from models.encoder_gcn import EncoderGCN
 from models.encoder_ggnn import EncoderGGNN
-from models.transformer_decoder import GraphTransformerDecoder
+from models.encoder_myggnn import EncoderMyGGNN
+from models.encoder_rggnn import EncoderRGGNN
+from models.decoder_transformer import DecoderTransformer
 from models.utils import generate_padding_mask, fix_seed, TokenEmbedding
 
 
@@ -47,33 +50,49 @@ class VarNamingModel(pl.LightningModule):
             **self.config["model"]["node_embedding"],
         )
 
-        # self.edge_embedding = TokenEmbedding(
-        #     vocab_size=
-        #     self._model_config["base"]["num_edge_types"],
-        #     self._model_config["base"]["edge_attr_dim"],
-        # )
+        edge_embedding_dim = self.config["model"].get(self.config["model"]["encoder"])
+        if edge_embedding_dim is not None:
+            self.edge_embedding = TokenEmbedding(
+                vocab_size=graph_var_miner.num_edge_types,
+                embedding_dim=edge_embedding_dim,
+            )
+        else:
+            self.edge_embedding = None
 
         encoder_config = self.config["model"][self.config["model"]["encoder"]]
         if self.config["model"]["encoder"] == "gcn":
-            self.encoder = GCNEncoder(
-                **encoder_config,
+            self.encoder = EncoderGCN(
                 in_channels=self.embedding_dim,
+                **encoder_config,
             )  # torch_geometric.data.Data -> torch.Tensor [num_nodes, d_model]
-        # elif self.config["model"]["encoder"] == "gatv2conv":
-        #     self._model = GATv2ConvEncoder(
-        #         **encoder_config,
-        #         in_channels=self.embedding_dim,
-        #     )
+        elif self.config["model"]["encoder"] == "gatv2conv":
+            self._model = EncoderGATv2Conv(
+                in_channels=self.embedding_dim,
+                hidden_channels=encoder_config["hidden_channels"],
+                num_layers=encoder_config["num_layers"],
+                edge_attr_dim=edge_embedding_dim,
+            )
         elif self.config["model"]["encoder"] == "ggnn":
             self._model = EncoderGGNN(
-                encoder_config
+                **encoder_config
+            )
+        elif self.config["model"]["encoder"] == "rggnn":
+            self._model = EncoderRGGNN(
+                in_channels=self.embedding_dim,
+                **encoder_config,
+            )
+        elif self.config["model"]["encoder"] == "myggnn":
+            self._model = EncoderMyGGNN(
+                hidden_dim=encoder_config["hidden_dim"],
+                num_layers=encoder_config["num_layers"],
+                edge_attr_dim=edge_embedding_dim,
             )
         else:
             raise ValueError(f"Unknown encoder type: {self.config['model']['encoder']}")
 
         decoder_config = self.config["model"][self.config["model"]["decoder"]]
         if self.config["model"]["decoder"] == "transformer_decoder":
-            self.decoder = GraphTransformerDecoder(
+            self.decoder = DecoderTransformer(
                 **decoder_config,
                 target_vocab_size=len(vocabulary),
                 max_tokens_length=self.max_token_length,
@@ -101,24 +120,28 @@ class VarNamingModel(pl.LightningModule):
             with open('test_log.z', 'a') as f:
                 f.write(f'batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n')
 
-
-        if self.config["model"]["encoder"] in ["gcn", "ggnn"]:
-            # shape: [num_nodes in batch, out_channels]
+        # shape: [num_nodes in batch, out_channels]
+        if self.config["model"]["encoder"] in ["gcn", "ggnn", "rggnn"]:
             varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index)  # type: ignore
-            if self.debug:
-                with open('test_log.z', 'a') as f:
-                    f.write(f'varname_batch: {varname_batch.shape} {varname_batch}\n')
+        elif self.config["model"]["encoder"] in ["gatv2conv", "myggnn"]:
+            batch_edge_attr_embed = self.edge_embedding(batch.edge_attr)
+            varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index, batch_edge_attr_embed)  # type: ignore
 
-            # shape: [batch, 1, out_channels]
-            varname_batch = torch_scatter.scatter_mean(
-                varname_batch * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
-            ).unsqueeze(1)
-            if self.debug:
-                with open('test_log.z', 'a') as f:
-                    f.write(f'varname_batch_scattered: {varname_batch.shape} {varname_batch}\n')
-            else:
-                raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
-    
+        if self.debug:
+            with open('test_log.z', 'a') as f:
+                f.write(f'varname_batch: {varname_batch.shape} {varname_batch}\n')
+
+        # shape: [batch, 1, out_channels]
+        varname_batch = torch_scatter.scatter_mean(
+            varname_batch * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
+        ).unsqueeze(1)
+        if self.debug:
+            with open('test_log.z', 'a') as f:
+                f.write(f'varname_batch_scattered: {varname_batch.shape} {varname_batch}\n')
+        else:
+            raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
+
+
         if self.config["model"]["decoder"] == "transformer_decoder":
             target_batch = batch.name  # shape: [batch size, src_seq_length]
 
@@ -156,6 +179,7 @@ class VarNamingModel(pl.LightningModule):
             if self.debug:
                 with open('test_log.z', 'a') as f:
                     f.write(f'Predicted: {predicted.shape} {predicted}\n')
+            #
             # TODO understand why there could be nan-s
             # assert not torch.any(torch.isnan(predicted)).item()
 

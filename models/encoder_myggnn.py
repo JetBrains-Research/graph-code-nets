@@ -4,14 +4,12 @@ from my_models import GGNNTypedEdges
 
 
 class EncoderMyGGNN(pl.LightningModule):
-    def __init__(self, model_config: dict):
+    def __init__(self, hidden_dim: int, num_layers: int, edge_attr_dim: int):
         super().__init__()
-        self._hidden_dim = model_config["hidden_dim"]
-        self._num_layers = model_config["num_layers"]
         self._ggnn = GGNNTypedEdges.MyGatedGraphConv(
-            out_channels=self._hidden_dim,
-            num_layers=self._num_layers,
-            edge_dim=model_config["edge_attr_dim"],
+            out_channels=hidden_dim,
+            num_layers=num_layers,
+            edge_dim=edge_attr_dim,
         )
 
     def forward(
