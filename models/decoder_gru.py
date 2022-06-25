@@ -66,7 +66,7 @@ class DecoderGRU(pl.LightningModule):
             current_output, h = self.gru(current_input, h)
             # shape: [batch_size, 1, vocab_size]
             proj = self.projection(current_output)
-            output[:, i, :] = proj
+            output[:, i:i+1, :] = proj
             if tgt is not None:
                 current_input = tgt[:, i, :]
             else:
