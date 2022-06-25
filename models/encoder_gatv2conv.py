@@ -14,7 +14,9 @@ class EncoderGATv2Conv(pl.LightningModule):
             in_channels_ = in_channels if i == 0 else hidden_channels
             modules.append(
                 (
-                    TransformerConv(in_channels_, hidden_channels, edge_dim=edge_attr_dim),
+                    TransformerConv(
+                        in_channels_, hidden_channels, edge_dim=edge_attr_dim
+                    ),
                     "x, edge_index, edge_attr -> x",
                 )
             )

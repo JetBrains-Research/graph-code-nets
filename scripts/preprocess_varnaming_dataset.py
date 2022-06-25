@@ -32,12 +32,15 @@ def preprocess(files, vocabulary, max_token_length, max_node_count):
     items_from = ijson.items(gz_from, "item")
 
     items_to = list(
-        map(lambda x:
-            change_dict(x, vocabulary, max_token_length),
-            filter(lambda x:
-                   len(x["ContextGraph"]["NodeLabels"]) <= max_node_count if max_node_count != -1 else True,
-                   items_from)
-            )
+        map(
+            lambda x: change_dict(x, vocabulary, max_token_length),
+            filter(
+                lambda x: len(x["ContextGraph"]["NodeLabels"]) <= max_node_count
+                if max_node_count != -1
+                else True,
+                items_from,
+            ),
+        )
     )
     json_to = json.dumps(items_to)
     with gzip.open(file_to, "wt") as gz_to:

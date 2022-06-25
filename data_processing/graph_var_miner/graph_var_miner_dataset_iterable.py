@@ -94,7 +94,9 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
         ]
         if "make_small" in self._config[self._mode]["dataset"]:
             make_small = self._config[self._mode]["dataset"]["make_small"]
-            self._data_files = list(filter(lambda _: random.random() < make_small, self._data_files))
+            self._data_files = list(
+                filter(lambda _: random.random() < make_small, self._data_files)
+            )
 
         self.__data_sample: Optional[Data] = None
 
@@ -119,12 +121,15 @@ class GraphVarMinerDatasetIterable(Dataset, IterableDataset):
     def _item_from_dict(
         self, dct, filename_from
     ) -> Optional[Data]:  # None means "skip this graph"
-        if self._max_node_count != -1 and len(dct["ContextGraph"]["NodeLabels"]) > self._max_node_count:
-#            if self._debug:
-#                print(
-#                    f"Ignoring too large graph from {filename_from} "
-#                    f'(have {len(dct["ContextGraph"]["NodeLabels"])} nodes > max_node_count = {self._max_node_count})'
-#                )
+        if (
+            self._max_node_count != -1
+            and len(dct["ContextGraph"]["NodeLabels"]) > self._max_node_count
+        ):
+            #            if self._debug:
+            #                print(
+            #                    f"Ignoring too large graph from {filename_from} "
+            #                    f'(have {len(dct["ContextGraph"]["NodeLabels"])} nodes > max_node_count = {self._max_node_count})'
+            #                )
             return None
 
         nodes = list(dct["ContextGraph"]["NodeLabels"].values())

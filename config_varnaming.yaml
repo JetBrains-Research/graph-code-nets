@@ -30,6 +30,11 @@ model:
     dim_feedforward: 2048
     nhead: 8
     dropout: 0.1
+  gru_decoder:
+    input_size: 128
+    hidden_size: 128
+    num_layers: 1
+    dropout: 0.1
   debug: True
 
 vocabulary:

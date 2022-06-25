@@ -16,6 +16,7 @@ from torch.optim.lr_scheduler import ExponentialLR, LambdaLR
 
 from data_processing import graph_var_miner
 from data_processing.vocabulary.vocabulary import Vocabulary
+from models.decoder_gru import DecoderGRU
 from models.encoder_gatv2conv import EncoderGATv2Conv
 from models.encoder_gcn import EncoderGCN
 from models.encoder_ggnn import EncoderGGNN
@@ -41,7 +42,9 @@ class VarNamingModel(pl.LightningModule):
         #        if self.debug:
         #            torch.autograd.set_detect_anomaly(True)
 
-        self.node_embedding_dim = self.config["model"]["node_embedding"]["embedding_dim"]
+        self.node_embedding_dim = self.config["model"]["node_embedding"][
+            "embedding_dim"
+        ]
         # self.edge_embedding_dim = self.config["model"]["edge_embedding"]["embedding_dim"]
 
         self.node_embedding = TokenEmbedding(
@@ -73,9 +76,7 @@ class VarNamingModel(pl.LightningModule):
                 edge_attr_dim=self.edge_embedding_dim,
             )
         elif self.config["model"]["encoder"] == "ggnn":
-            self.encoder = EncoderGGNN(
-                **encoder_config
-            )
+            self.encoder = EncoderGGNN(**encoder_config)
         elif self.config["model"]["encoder"] == "rggnn":
             self.encoder = EncoderRGGNN(
                 in_channels=self.node_embedding_dim,
@@ -97,6 +98,12 @@ class VarNamingModel(pl.LightningModule):
                 target_vocab_size=len(vocabulary),
                 max_tokens_length=self.max_token_length,
             )
+        elif self.config["model"]["decoder"] == "gru_decoder":
+            self.decoder = DecoderGRU(
+                **decoder_config,
+                target_vocab_size=len(vocabulary),
+                max_tokens_length=self.max_token_length,
+            )
         else:
             raise ValueError(f"Unknown decoder type: {self.config['model']['decoder']}")
 
@@ -110,37 +117,40 @@ class VarNamingModel(pl.LightningModule):
         # batch.x shape: [num_nodes in batch, src_seq_length]
 
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'batch.x: {batch.x.shape} {batch.x}\n')
+            with open("test_log.z", "a") as f:
+                f.write(f"batch.x: {batch.x.shape} {batch.x}\n")
 
         # shape: [num_nodes in batch, embedding_dim]
         batch_x_mean = torch.mean(self.node_embedding(batch.x), dim=1)
 
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n')
+            with open("test_log.z", "a") as f:
+                f.write(f"batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n")
 
         # shape: [num_nodes in batch, out_channels]
         if self.config["model"]["encoder"] in ["gcn", "ggnn", "rggnn"]:
             varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index)  # type: ignore
         elif self.config["model"]["encoder"] in ["gatv2conv", "myggnn"]:
             batch_edge_attr_embed = self.edge_embedding(batch.edge_attr)
-            varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index, batch_edge_attr_embed)  # type: ignore
+            varname_batch: torch.Tensor = self.encoder(
+                batch_x_mean, batch.edge_index, batch_edge_attr_embed
+            )  # type: ignore
 
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'varname_batch: {varname_batch.shape} {varname_batch}\n')
+            with open("test_log.z", "a") as f:
+                f.write(f"varname_batch: {varname_batch.shape} {varname_batch}\n")
 
         # shape: [batch, 1, out_channels]
         varname_batch = torch_scatter.scatter_mean(
             varname_batch * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
         ).unsqueeze(1)
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'varname_batch_scattered: {varname_batch.shape} {varname_batch}\n')
+            with open("test_log.z", "a") as f:
+                f.write(
+                    f"varname_batch_scattered: {varname_batch.shape} {varname_batch}\n"
+                )
         else:
             raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
-
 
         if self.config["model"]["decoder"] == "transformer_decoder":
             target_batch = batch.name  # shape: [batch size, src_seq_length]
@@ -166,7 +176,9 @@ class VarNamingModel(pl.LightningModule):
                     f.write(f"forward target_batch: {target_batch[:, :7]}\n")
                     f.write(f"forward padding: {target_padding_mask[:, :7]}\n")
 
-            assert torch.all(torch.any(torch.logical_not(target_padding_mask), dim=1)).item()
+            assert torch.all(
+                torch.any(torch.logical_not(target_padding_mask), dim=1)
+            ).item()
 
             predicted = self.decoder(
                 target_batch,  # shape: [batch size, src_seq_length, embedding_dim]
@@ -175,23 +187,34 @@ class VarNamingModel(pl.LightningModule):
                 tgt_key_padding_mask=target_padding_mask,  # shape: [batch size, src_seq_length]
             )  # shape: [batch size, src_seq_length, target vocabulary dim]
 
-
             if self.debug:
-                with open('test_log.z', 'a') as f:
-                    f.write(f'Predicted: {predicted.shape} {predicted}\n')
+                with open("test_log.z", "a") as f:
+                    f.write(f"Predicted: {predicted.shape} {predicted}\n")
             #
             # TODO understand why there could be nan-s
             # assert not torch.any(torch.isnan(predicted)).item()
 
-            return predicted
+        elif self.config["model"]["decoder"] == "gru_decoder":
+            target_batch = batch.name  # shape: [batch size, src_seq_length]
+            target_batch = self.node_embedding(
+                target_batch
+            )  # shape: [batch size, src_seq_length, embedding_dim]
+            predicted = self.decoder(
+                enc=varname_batch,  # shape: [batch size, 1, d_model]
+                tgt=target_batch,  # shape: [batch size, src_seq_length, embedding_dim]
+            )
+            if self.debug:
+                with open("test_log.z", "a") as f:
+                    f.write(f"Predicted: {predicted.shape} {predicted}\n")
         else:
             raise ValueError(f"Unknown decoder type: {self.config['model']['decoder']}")
+        return predicted
 
     @torch.no_grad()
     def generate(
         self, batch: Batch, method="beam_search", bandwidth=10, top_k=1, max_steps=5000
     ):  # batch without `name` attribute
-#        with torch.autograd.detect_anomaly():
+        #        with torch.autograd.detect_anomaly():
         assert not torch.any(torch.isnan(batch.x)).item()
         assert not torch.any(torch.isnan(batch.edge_index)).item()
         assert not torch.any(torch.isnan(batch.edge_attr)).item()
@@ -199,33 +222,34 @@ class VarNamingModel(pl.LightningModule):
         # batch.x shape: [num_nodes in batch, src_seq_length]
 
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'batch.x: {batch.x.shape} {batch.x}\n')
+            with open("test_log.z", "a") as f:
+                f.write(f"batch.x: {batch.x.shape} {batch.x}\n")
 
         # shape: [num_nodes in batch, embedding_dim]
         batch_x_mean = torch.mean(self.node_embedding(batch.x), dim=1)
 
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n')
-
+            with open("test_log.z", "a") as f:
+                f.write(f"batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n")
 
         if self.config["model"]["encoder"] == "gcn":
             # shape: [num_nodes in batch, out_channels]
             varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index)  # type: ignore
             if self.debug:
-                with open('test_log.z', 'a') as f:
-                    f.write(f'varname_batch: {varname_batch.shape} {varname_batch}\n')
+                with open("test_log.z", "a") as f:
+                    f.write(f"varname_batch: {varname_batch.shape} {varname_batch}\n")
 
             # shape: [batch, 1, out_channels]
             varname_batch = torch_scatter.scatter_mean(
                 varname_batch * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
             ).unsqueeze(1)
             if self.debug:
-                with open('test_log.z', 'a') as f:
-                    f.write(f'varname_batch_scattered: {varname_batch.shape} {varname_batch}\n')
-            else:
-                raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
+                with open("test_log.z", "a") as f:
+                    f.write(
+                        f"varname_batch_scattered: {varname_batch.shape} {varname_batch}\n"
+                    )
+        else:
+            raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
 
         if self.config["model"]["decoder"] == "transformer_decoder":
             if method == "greedy":
@@ -304,9 +328,9 @@ class VarNamingModel(pl.LightningModule):
                         b_i : b_i + 1, :
                     ]  # keep batch dimension
 
-                    current_state = torch.ones((1, 1), device=self.device, dtype=torch.int).fill_(
-                        self.vocabulary.bos_id()
-                    )
+                    current_state = torch.ones(
+                        (1, 1), device=self.device, dtype=torch.int
+                    ).fill_(self.vocabulary.bos_id())
 
                     steps = 0
                     pq: list[BeamNode] = []
@@ -358,7 +382,9 @@ class VarNamingModel(pl.LightningModule):
 
                         # shape: (1, length, target_vocabulary_size)
                         predicted = self.decoder(
-                            current_state_embed, varname_batch_part, tgt_mask=target_mask
+                            current_state_embed,
+                            varname_batch_part,
+                            tgt_mask=target_mask,
                         )
                         neg_log_prob_predicted = -F.log_softmax(predicted, dim=2)
                         top_scores, top_indices = torch.topk(
@@ -376,26 +402,40 @@ class VarNamingModel(pl.LightningModule):
                 return generated_batch
             else:
                 raise ValueError(f"Unknown method: {method}")
+        elif self.config["model"]["decoder"] == "gru_decoder":
+            if method == "greedy":
+                generated_batch = self.decoder(varname_batch)
+                generated_batch = generated_batch.argmax(dim=-1)
+
+                # fill pad after first eos
+                # something very ugly, but working :)
+                # first create bitmask of eos, then cumsum, so only those before eos are 0 then bitmask elements
+                # that are not 0 and shift it to the right, so we don't pad eos element
+                generated_batch[:, 0, 1:][
+                    ((generated_batch == self.vocabulary.eos_id()).cumsum(dim=2) != 0)[
+                        :, 0, :-1
+                    ]
+                ] = self.vocabulary.pad_id()
+                return generated_batch
+            else:
+                raise ValueError(f"Unsupported method: {method}")
 
     def _shared_step(
         self, batch: Batch, batch_idx: int, step: str
     ) -> tuple[Tensor, Tensor]:
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'---------------------- {step} begin --------------------\n')
+            with open("test_log.z", "a") as f:
+                f.write(f"---------------------- {step} begin --------------------\n")
         predicted = self(batch)
         input = predicted[:, :-1, :].reshape(-1, predicted.shape[-1])
         target = batch.name[:, 1:].long().reshape(-1)
-#        mask = torch.any(torch.isnan(input),dim=1)
-#        target[mask] = self.vocabulary.pad_id()  # ignore indices with nan
+        #        mask = torch.any(torch.isnan(input),dim=1)
+        #        target[mask] = self.vocabulary.pad_id()  # ignore indices with nan
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'Input: {input.shape} {input} {target.shape} {target}\n')
-                f.write(f'Any nan in input {torch.any(torch.isnan(input))}\n')
-        loss = self.loss_fn(
-            input,
-            target
-        )
+            with open("test_log.z", "a") as f:
+                f.write(f"Input: {input.shape} {input} {target.shape} {target}\n")
+                f.write(f"Any nan in input {torch.any(torch.isnan(input))}\n")
+        loss = self.loss_fn(input, target)
         assert not torch.any(torch.isnan(loss)).item()
         self.log(
             f"{step}_loss",
@@ -411,8 +451,8 @@ class VarNamingModel(pl.LightningModule):
             batch_size=batch.num_graphs,
         )
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'---------------------- {step} end --------------------\n')
+            with open("test_log.z", "a") as f:
+                f.write(f"---------------------- {step} end --------------------\n")
         return predicted, loss
 
     def _generate_step(self, batch: Batch, batch_idx: int, step: str):
@@ -438,8 +478,8 @@ class VarNamingModel(pl.LightningModule):
     # input_t: (batch, top_k, dim)
     def _log_metrics(self, batch: Batch, input_t: Tensor, batch_idx: int, step: str):
         if self.debug:
-            with open('test_log.z', 'a') as f:
-                f.write(f'input_t: {input_t.shape} {input_t}\n')
+            with open("test_log.z", "a") as f:
+                f.write(f"input_t: {input_t.shape} {input_t}\n")
         generation_config = self.config[step]["generation"]
 
         mrr_k = int(generation_config["mrr_k"])
@@ -583,7 +623,9 @@ class VarNamingModel(pl.LightningModule):
             itertools.chain(self.encoder.parameters(), self.decoder.parameters()),
             lr=lr,
         )
-        lr_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: lr * (lr_decay_gamma ** epoch))
+        lr_scheduler = LambdaLR(
+            optimizer, lr_lambda=lambda epoch: lr * (lr_decay_gamma**epoch)
+        )
         # lr_scheduler = ExponentialLR(optimizer, gamma=0.9)
         return [optimizer], [lr_scheduler]
 
