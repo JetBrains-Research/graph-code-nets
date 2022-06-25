@@ -103,6 +103,8 @@ class VarNamingModel(pl.LightningModule):
                 **decoder_config,
                 target_vocab_size=len(vocabulary),
                 max_tokens_length=self.max_token_length,
+                vocabulary=self.vocabulary,
+                embedding=self.node_embedding,
             )
         else:
             raise ValueError(f"Unknown decoder type: {self.config['model']['decoder']}")
