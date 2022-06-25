@@ -135,6 +135,8 @@ class VarNamingModel(pl.LightningModule):
             varname_batch: torch.Tensor = self.encoder(
                 batch_x_mean, batch.edge_index, batch_edge_attr_embed
             )  # type: ignore
+        else:
+            raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
 
         if self.debug:
             with open("test_log.z", "a") as f:
@@ -149,8 +151,6 @@ class VarNamingModel(pl.LightningModule):
                 f.write(
                     f"varname_batch_scattered: {varname_batch.shape} {varname_batch}\n"
                 )
-        else:
-            raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
 
         if self.config["model"]["decoder"] == "transformer_decoder":
             target_batch = batch.name  # shape: [batch size, src_seq_length]
