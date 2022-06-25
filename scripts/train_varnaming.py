@@ -92,8 +92,9 @@ def main():
     #with torch.autograd.set_detect_anomaly(True):
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
-    print("Best model: ", checkpoint_callback.best_model_path)
-    print(f"Top {checkpoint_callback.save_top_k}: {checkpoint_callback.best_k_models}")
+    print("Best model: ", checkpoint_callback_val_loss.best_model_path)
+    print("Last model: ", checkpoint_callback_epoch.best_model_path)
+    print(f"Top {checkpoint_callback_val_loss.save_top_k}: {checkpoint_callback_val_loss.best_k_models}")
 
 
 if __name__ == "__main__":
