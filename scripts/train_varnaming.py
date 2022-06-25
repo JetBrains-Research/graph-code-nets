@@ -65,19 +65,27 @@ def main():
         checkpoint_dirpath = f'{config["checkpoint"]["dir"]}/{timestamp}'
     else:
         checkpoint_dirpath = os.path.dirname(ckpt_path)
-    checkpoint_callback = ModelCheckpoint(
+    checkpoint_callback_val_loss = ModelCheckpoint(
         dirpath=checkpoint_dirpath,
         every_n_epochs=1,
         save_last=True,
         save_top_k=-1, # int(config["checkpoint"]["top_k"]),
         monitor="validation_loss",
-        save_on_train_epoch_end=True
+    )
+    checkpoint_callback_epoch = ModelCheckpoint(
+        dirpath=checkpoint_dirpath,
+        every_n_epochs=1,
+        save_last=True,
+        save_top_k=-1,
+        mode="max",
+        monitor="epoch",
+        save_on_train_epoch_end=True,
     )
     lr_monitor = LearningRateMonitor(logging_interval='step')
 
     trainer = pl.Trainer(
         **config["trainer"],
-        callbacks=[checkpoint_callback, lr_monitor],
+        callbacks=[checkpoint_callback_val_loss, checkpoint_callback_epoch, lr_monitor],
         logger=logger
     )
     # print(trainer.tuner.lr_find(model, datamodule=datamodule).suggestion())
