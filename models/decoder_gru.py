@@ -47,7 +47,7 @@ class DecoderGRU(pl.LightningModule):
         # shape: [num_layers, batch size, d_model]
         h = enc.transpose(0, 1).repeat(self.num_layers, 1, 1)
         # shape: [batch_size, max output sequence length, size of target vocabulary]
-        output = torch.tensor(
+        output = torch.zeros(
             (enc.size(0), self.max_tokens_length, self.target_vocab_size),
             dtype=torch.float,
             device=self.device,
