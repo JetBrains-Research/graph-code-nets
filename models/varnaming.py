@@ -12,7 +12,7 @@ from torch import Tensor
 from torch.nn import Transformer
 from torch_geometric.data import Batch
 from torch_geometric.utils import to_dense_batch
-from torch.optim.lr_scheduler import ExponentialLR
+from torch.optim.lr_scheduler import ExponentialLR, LambdaLR
 
 from data_processing import graph_var_miner
 from data_processing.vocabulary.vocabulary import Vocabulary
@@ -581,11 +581,9 @@ class VarNamingModel(pl.LightningModule):
             itertools.chain(self.encoder.parameters(), self.decoder.parameters()),
             lr=self.config["train"]["learning_rate"],
         )
-        lr_scheduler = ExponentialLR(optimizer, gamma=0.9)
-        return {
-            "optimizer": optimizer,
-            "scheduler": lr_scheduler
-        }
+        lr_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: self.config["train"]["lr_decay_gamma"] ** epoch)
+        # lr_scheduler = ExponentialLR(optimizer, gamma=0.9)
+        return [optimizer], [lr_scheduler]
 
     # def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:  # type: ignore
     #     pass
