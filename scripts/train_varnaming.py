@@ -75,11 +75,14 @@ def main():
     lr_monitor = LearningRateMonitor(logging_interval='step')
 
     trainer = pl.Trainer(
-        **config["trainer"], callbacks=[checkpoint_callback, lr_monitor], logger=logger
+        **config["trainer"],
+        callbacks=[checkpoint_callback, lr_monitor],
+        logger=logger,
+        resume_from_checkpoint=ckpt_path
     )
     # print(trainer.tuner.lr_find(model, datamodule=datamodule).suggestion())
     #with torch.autograd.set_detect_anomaly(True):
-    trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
+    trainer.fit(model, datamodule=datamodule)
 
     print("Best model: ", checkpoint_callback.best_model_path)
     print(f"Top {checkpoint_callback.save_top_k}: {checkpoint_callback.best_k_models}")

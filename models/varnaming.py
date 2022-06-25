@@ -577,11 +577,13 @@ class VarNamingModel(pl.LightningModule):
 
     def configure_optimizers(self):
         # TODO add optimizer config
+        lr = self.config["train"]["learning_rate"]
+        lr_decay_gamma = self.config["train"]["lr_decay_gamma"]
         optimizer = torch.optim.AdamW(
             itertools.chain(self.encoder.parameters(), self.decoder.parameters()),
-            lr=self.config["train"]["learning_rate"],
+            lr=lr,
         )
-        lr_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: self.config["train"]["lr_decay_gamma"] ** epoch)
+        lr_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: lr * (lr_decay_gamma ** epoch))
         # lr_scheduler = ExponentialLR(optimizer, gamma=0.9)
         return [optimizer], [lr_scheduler]
 
