@@ -57,7 +57,7 @@ class DecoderGRU(pl.LightningModule):
         output[:, -1, self.vocabulary.eos_id()] = 1
         # shape: [batch_size, 1]
         current_input = torch.full(
-            (enc.size(0), 1, 1), self.vocabulary.bos_id(), dtype=torch.int, device=self.device
+            (enc.size(0), 1), self.vocabulary.bos_id(), dtype=torch.int, device=self.device
         )
         # shape: [batch_size, 1, embedding size == d_model == input size]
         current_input = self.embedding(current_input)
@@ -68,7 +68,8 @@ class DecoderGRU(pl.LightningModule):
             proj = self.projection(current_output)
             output[:, i:i+1, :] = proj
             if tgt is not None:
-                current_input = tgt[:, i, :]
+                # shape: [batch_size, 1, embedding_size == d_model == input size]
+                current_input = tgt[:, i:i+1, :]
             else:
                 # shape: [batch_size, 1]
                 current_input = proj.argmax(dim=-1)
