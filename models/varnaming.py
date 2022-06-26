@@ -397,7 +397,7 @@ class VarNamingModel(pl.LightningModule):
                         )
                         neg_log_prob_predicted = -F.log_softmax(predicted, dim=2)
                         top_scores, top_indices = torch.topk(
-                            neg_log_prob_predicted[:, -1, :], bandwidth, dim=1
+                            neg_log_prob_predicted[:, -1, :], bandwidth, dim=1, largest=False,
                         )
 
                         for i in range(top_scores.size(1)):
