@@ -15,6 +15,7 @@ from torch_geometric.utils import to_dense_batch
 from torch.optim.lr_scheduler import ExponentialLR, LambdaLR
 
 from data_processing import graph_var_miner
+from data_processing.identifiersplitting import split_identifier_into_parts
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.decoder_gru import DecoderGRU
 from models.encoder_gatv2conv import EncoderGATv2Conv
@@ -513,6 +514,7 @@ class VarNamingModel(pl.LightningModule):
         chrf_metric = CHRF()
 
         chrf = torch.tensor(0.0, device=self.device)
+        f1 = torch.tensor(0.0, device=self.device)
         acc_exact_1 = torch.tensor(0.0, device=self.device)
         acc_exact_k = torch.tensor(0.0, device=self.device)
         mrr_exact_k = torch.tensor(0.0, device=self.device)
@@ -552,6 +554,10 @@ class VarNamingModel(pl.LightningModule):
                         chrf += chrf_metric.sentence_score(
                             input_dec, [target_dec]
                         ).score
+                        target_dec_splitted = split_identifier_into_parts(target_dec)
+                        input_dec_splitted = split_identifier_into_parts(input_dec)
+                        intersection = [subtoken for subtoken in target_dec_splitted if subtoken in input_dec_splitted]
+                        f1 += len(intersection)/len(input_dec_splitted)
                     else:
                         chrf += 0.0  # just for clarity
                     acc_exact_1 += float(exact_match)
@@ -563,6 +569,7 @@ class VarNamingModel(pl.LightningModule):
             if not mrr_found:
                 mrr_exact_k += 0.0  # just for clarity
 
+        f1 /= input_t.shape[0]
         chrf /= 100.0
         chrf /= input_t.shape[0]
         acc_exact_1 /= input_t.shape[0]
@@ -574,6 +581,14 @@ class VarNamingModel(pl.LightningModule):
                     f"metrics: {chrf}, {acc_exact_1}, {acc_exact_k}, {mrr_exact_k}\n"
                 )
 
+        self.log(
+            "f1",
+            f1,
+            prog_bar=True,
+            on_step=True,
+            on_epoch=True,
+            batch_size=batch.num_graphs,
+        )
         self.log(
             "chrf",
             chrf,
