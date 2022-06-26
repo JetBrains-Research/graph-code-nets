@@ -234,24 +234,30 @@ class VarNamingModel(pl.LightningModule):
             with open("test_log.z", "a") as f:
                 f.write(f"batch_x_mean.embedded: {batch_x_mean.shape} {batch_x_mean}\n")
 
-        if self.config["model"]["encoder"] == "gcn":
-            # shape: [num_nodes in batch, out_channels]
+        # shape: [num_nodes in batch, out_channels]
+        if self.config["model"]["encoder"] in ["gcn", "ggnn", "rggnn"]:
             varname_batch: torch.Tensor = self.encoder(batch_x_mean, batch.edge_index)  # type: ignore
-            if self.debug:
-                with open("test_log.z", "a") as f:
-                    f.write(f"varname_batch: {varname_batch.shape} {varname_batch}\n")
-
-            # shape: [batch, 1, out_channels]
-            varname_batch = torch_scatter.scatter_mean(
-                varname_batch * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
-            ).unsqueeze(1)
-            if self.debug:
-                with open("test_log.z", "a") as f:
-                    f.write(
-                        f"varname_batch_scattered: {varname_batch.shape} {varname_batch}\n"
-                    )
+        elif self.config["model"]["encoder"] in ["gatv2conv", "myggnn"]:
+            batch_edge_attr_embed = self.edge_embedding(batch.edge_attr)
+            varname_batch: torch.Tensor = self.encoder(
+                batch_x_mean, batch.edge_index, batch_edge_attr_embed
+            )  # type: ignore
         else:
             raise ValueError(f"Unknown encoder: {self.config['model']['encoder']}")
+
+        if self.debug:
+            with open("test_log.z", "a") as f:
+                f.write(f"varname_batch: {varname_batch.shape} {varname_batch}\n")
+
+        # shape: [batch, 1, out_channels]
+        varname_batch = torch_scatter.scatter_mean(
+            varname_batch * batch.marked_tokens.unsqueeze(-1), batch.batch, dim=0
+        ).unsqueeze(1)
+        if self.debug:
+            with open("test_log.z", "a") as f:
+                f.write(
+                    f"varname_batch_scattered: {varname_batch.shape} {varname_batch}\n"
+                )
 
         if self.config["model"]["decoder"] == "transformer_decoder":
             if method == "greedy":
