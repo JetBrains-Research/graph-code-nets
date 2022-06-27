@@ -396,7 +396,7 @@ class VarNamingModel(pl.LightningModule):
                             )
                             num_generated_parts = 0
                             current_state_embed_global.fill_(0.)
-                            target_padding_mask.fill(True)
+                            target_padding_mask.fill_(True)
                             cond.notify_all()
 
                         if max_len_reached or eos_reached or max_steps_reached:
