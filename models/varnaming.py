@@ -378,6 +378,19 @@ class VarNamingModel(pl.LightningModule):
                         )
                         max_steps_reached = steps > max_steps
 
+                        def execute_generation():
+                            nonlocal predicted_global
+                            nonlocal num_generated_parts
+                            # shape: (1, length, target_vocabulary_size)
+                            predicted_global = self.decoder(
+                                current_state_embed_global,
+                                varname_batch,
+                                tgt_mask=target_mask,
+                            )
+                            num_generated_parts = 0
+                            current_state_embed_global.fill_(0.)
+                            cond.notify_all()
+
                         if max_len_reached or eos_reached or max_steps_reached:
                             # padding is added automatically (generated_batch is filled with pad_id)
                             generated_batch[
@@ -394,6 +407,8 @@ class VarNamingModel(pl.LightningModule):
 
                             if generated_part_n >= top_k:
                                 num_alive_parts -= 1
+                                if num_generated_parts == num_alive_parts:
+                                    execute_generation()
                                 break
                             else:
                                 continue
@@ -408,15 +423,7 @@ class VarNamingModel(pl.LightningModule):
                                 current_state_embed_global[b_i:b_i+1, :current_state_embed.size(1), :] = current_state_embed
                                 await cond.wait()
                             elif num_generated_parts == num_alive_parts:
-                                # shape: (1, length, target_vocabulary_size)
-                                predicted_global = self.decoder(
-                                    current_state_embed_global,
-                                    varname_batch,
-                                    tgt_mask=target_mask,
-                                )
-                                num_generated_parts = 0
-                                current_state_embed_global.fill_(0.)
-                                cond.notify_all()
+                                execute_generation()
                             else:
                                 raise ValueError(f"{num_generated_parts} > {num_alive_parts}")
 
