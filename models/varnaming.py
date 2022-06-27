@@ -408,7 +408,8 @@ class VarNamingModel(pl.LightningModule):
                             if generated_part_n >= top_k:
                                 num_alive_parts -= 1
                                 if num_generated_parts == num_alive_parts:
-                                    execute_generation()
+                                    async with cond:
+                                        execute_generation()
                                 break
                             else:
                                 continue
