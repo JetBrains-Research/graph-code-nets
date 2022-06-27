@@ -347,8 +347,7 @@ class VarNamingModel(pl.LightningModule):
                 ).to(self.device)
 
                 target_padding_mask = torch.ones((varname_batch.size(0),
-                                                          self.max_token_length,
-                                                          self.node_embedding_dim),
+                                                          self.max_token_length),
                                                          dtype=torch.bool,
                                                          device=self.device)
 
@@ -431,7 +430,7 @@ class VarNamingModel(pl.LightningModule):
                         async with cond:
                             if num_generated_parts < num_alive_parts:
                                 current_state_embed_global[b_i:b_i+1, :current_state_embed.size(1), :] = current_state_embed
-                                target_padding_mask[b_i:b_i+1, :current_state_embed.size(1), :] = False
+                                target_padding_mask[b_i:b_i+1, :current_state_embed.size(1)] = False
                                 await cond.wait()
                             elif num_generated_parts == num_alive_parts:
                                 execute_generation()
