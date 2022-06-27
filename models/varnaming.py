@@ -406,7 +406,7 @@ class VarNamingModel(pl.LightningModule):
                         async with cond:
                             if num_generated_parts < num_alive_parts:
                                 current_state_embed_global[b_i:b_i+1, :current_state_embed.size(1), :] = current_state_embed
-                                await cond
+                                await cond.wait()
                             elif num_generated_parts == num_alive_parts:
                                 # shape: (1, length, target_vocabulary_size)
                                 predicted_global = self.decoder(
