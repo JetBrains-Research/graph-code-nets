@@ -342,6 +342,13 @@ class VarNamingModel(pl.LightningModule):
                                                           self.node_embedding_dim),
                                                          device=self.device)
 
+                target_mask = Transformer.generate_square_subsequent_mask(
+                    current_state_embed_global.size(1)
+                ).to(self.device)
+                if self.debug:
+                    with open("test_log.z", "a") as f:
+                        f.write(f"beam search mask: {target_mask}\n")
+
                 async def generate_for_part(b_i):
                     nonlocal num_generated_parts
                     nonlocal num_alive_parts
@@ -390,13 +397,6 @@ class VarNamingModel(pl.LightningModule):
                                 break
                             else:
                                 continue
-
-                        target_mask = Transformer.generate_square_subsequent_mask(
-                            current_state.size(1)
-                        ).to(self.device)
-                        if self.debug:
-                            with open("test_log.z", "a") as f:
-                                f.write(f"beam search mask: {target_mask}\n")
 
                         current_state_embed = self.node_embedding(
                             current_state
