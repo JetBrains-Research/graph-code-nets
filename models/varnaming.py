@@ -435,9 +435,12 @@ class VarNamingModel(pl.LightningModule):
                                 pq, BeamNode(score=new_score, state=new_state)
                             )
 
-                asyncio.run(asyncio.gather(
-                    *[generate_for_part(b_i) for b_i in range(varname_batch.size(0))]
-                ))
+                async def launch_beamsearch():
+                    await asyncio.gather(
+                        *[generate_for_part(b_i) for b_i in range(varname_batch.size(0))]
+                    )
+
+                asyncio.run(launch_beamsearch())
                 return generated_batch
             else:
                 raise ValueError(f"Unknown method: {method}")
