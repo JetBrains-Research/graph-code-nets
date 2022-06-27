@@ -1,3 +1,4 @@
+import asyncio
 import heapq
 import itertools
 from dataclasses import dataclass, field
@@ -331,38 +332,49 @@ class VarNamingModel(pl.LightningModule):
                     dtype=torch.int,
                     device=self.device,
                 ).fill_(self.vocabulary.pad_id())
-                for b_i in range(varname_batch.size(0)):
+
+                num_generated_parts = 0
+                num_alive_parts = varname_batch.size(0)
+                cond = asyncio.Condition()
+                predicted_global = None
+                current_state_embed_global = torch.zeros((varname_batch.size(0),
+                                                          self.max_token_length,
+                                                          self.node_embedding_dim),
+                                                         device=self.device)
+
+                async def generate_for_part(b_i):
+                    nonlocal num_generated_parts
+                    nonlocal num_alive_parts
+                    nonlocal predicted_global
+                    nonlocal current_state_embed_global
                     generated_part_n = 0
                     varname_batch_part = varname_batch[
-                        b_i : b_i + 1, :
-                    ]  # keep batch dimension
-
+                                         b_i: b_i + 1, :
+                                         ]  # keep batch dimension
                     current_state = torch.ones(
                         (1, 1), device=self.device, dtype=torch.int
                     ).fill_(self.vocabulary.bos_id())
-
                     steps = 0
                     pq: list[BeamNode] = []
                     heapq.heappush(pq, BeamNode(0.0, current_state))
-
-                    while True:
+                    while True and len(pq) > 0:
                         steps += 1
                         node = heapq.heappop(pq)
                         current_score = node.score
                         current_state = node.state
 
                         max_len_reached = (
-                            current_state.size(1) >= self.max_token_length - 1
+                                current_state.size(1) >= self.max_token_length - 1
                         )
                         eos_reached = (
-                            current_state[:, -1].item() == self.vocabulary.eos_id()
+                                current_state[:, -1].item() == self.vocabulary.eos_id()
                         )
                         max_steps_reached = steps > max_steps
 
                         if max_len_reached or eos_reached or max_steps_reached:
                             # padding is added automatically (generated_batch is filled with pad_id)
                             generated_batch[
-                                b_i : b_i + 1, generated_part_n, : current_state.size(1)
+                            b_i: b_i + 1, generated_part_n, : current_state.size(1)
                             ] = current_state
 
                             # If not eos_reached, then we need to add eos to the end
@@ -374,6 +386,7 @@ class VarNamingModel(pl.LightningModule):
                             generated_part_n += 1
 
                             if generated_part_n >= top_k:
+                                num_alive_parts -= 1
                                 break
                             else:
                                 continue
@@ -389,12 +402,25 @@ class VarNamingModel(pl.LightningModule):
                             current_state
                         )  # shape: [batch size, src_seq_length, embedding_dim]
 
-                        # shape: (1, length, target_vocabulary_size)
-                        predicted = self.decoder(
-                            current_state_embed,
-                            varname_batch_part,
-                            tgt_mask=target_mask,
-                        )
+                        num_generated_parts += 1
+                        if num_generated_parts < num_alive_parts:
+                            current_state_embed_global[b_i:b_i+1, :current_state_embed.size(1), :] = current_state_embed
+                            await cond
+                        elif num_generated_parts == num_alive_parts:
+                            # shape: (1, length, target_vocabulary_size)
+                            predicted_global = self.decoder(
+                                current_state_embed_global,
+                                varname_batch_part,
+                                tgt_mask=target_mask,
+                            )
+                            num_generated_parts = 0
+                            current_state_embed_global.fill_(0.)
+                            cond.notify_all()
+                        else:
+                            raise ValueError(f"{num_generated_parts} > {num_alive_parts}")
+
+                        predicted = predicted_global[b_i:b_i+1, :, :]
+
                         neg_log_prob_predicted = -F.log_softmax(predicted, dim=2)
                         top_scores, top_indices = torch.topk(
                             neg_log_prob_predicted[:, -1, :], bandwidth, dim=1, largest=False,
@@ -403,11 +429,15 @@ class VarNamingModel(pl.LightningModule):
                         for i in range(top_scores.size(1)):
                             new_score = current_score + top_scores[:, i].item()
                             new_state = torch.cat(
-                                [current_state, top_indices[:, i : i + 1]], dim=1
+                                [current_state, top_indices[:, i: i + 1]], dim=1
                             )
                             heapq.heappush(
                                 pq, BeamNode(score=new_score, state=new_state)
                             )
+
+                await asyncio.gather(
+                    *[generate_for_part(b_i) for b_i in range(varname_batch.size(0))]
+                )
                 return generated_batch
             else:
                 raise ValueError(f"Unknown method: {method}")
