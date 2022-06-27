@@ -393,6 +393,7 @@ class VarNamingModel(pl.LightningModule):
                                 current_state_embed_global,
                                 varname_batch,
                                 tgt_mask=target_mask,
+                                tgt_key_padding_mask=target_padding_mask,
                             )
                             num_generated_parts = 0
                             current_state_embed_global.fill_(0.)
