@@ -411,7 +411,7 @@ class VarNamingModel(pl.LightningModule):
                                 # shape: (1, length, target_vocabulary_size)
                                 predicted_global = self.decoder(
                                     current_state_embed_global,
-                                    varname_batch_part,
+                                    varname_batch,
                                     tgt_mask=target_mask,
                                 )
                                 num_generated_parts = 0
