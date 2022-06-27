@@ -345,6 +345,13 @@ class VarNamingModel(pl.LightningModule):
                 target_mask = Transformer.generate_square_subsequent_mask(
                     current_state_embed_global.size(1)
                 ).to(self.device)
+
+                target_padding_mask = torch.ones((varname_batch.size(0),
+                                                          self.max_token_length,
+                                                          self.node_embedding_dim),
+                                                         dtype=torch.bool,
+                                                         device=self.device)
+
                 if self.debug:
                     with open("test_log.z", "a") as f:
                         f.write(f"beam search mask: {target_mask}\n")
@@ -389,6 +396,7 @@ class VarNamingModel(pl.LightningModule):
                             )
                             num_generated_parts = 0
                             current_state_embed_global.fill_(0.)
+                            target_padding_mask.fill(True)
                             cond.notify_all()
 
                         if max_len_reached or eos_reached or max_steps_reached:
@@ -422,6 +430,7 @@ class VarNamingModel(pl.LightningModule):
                         async with cond:
                             if num_generated_parts < num_alive_parts:
                                 current_state_embed_global[b_i:b_i+1, :current_state_embed.size(1), :] = current_state_embed
+                                target_padding_mask[b_i:b_i+1, :current_state_embed.size(1), :] = False
                                 await cond.wait()
                             elif num_generated_parts == num_alive_parts:
                                 execute_generation()
