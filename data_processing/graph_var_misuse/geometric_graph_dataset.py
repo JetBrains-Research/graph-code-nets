@@ -65,20 +65,15 @@ class GraphDataset(Dataset):
             _edge_attr = [rel[2] for rel in edges]
             return torch.tensor(_edge_index), torch.tensor(_edge_attr)
 
-        tokens = [
-            self._vocabulary.translate(t)[: self._config["data"]["max_token_length"]]
-            for t in json_data["source_tokens"]
-        ]
-        while len(tokens) < self._config["data"]["max_sequence_length"]:
-            tokens.append([0])
-        tokens = tokens[: min(len(tokens), self._config["data"]["max_sequence_length"])]
-        tokens = np.array(
-            [
-                np.pad(x, (0, self._config["data"]["max_token_length"] - len(x)))
-                for x in tokens
+        max_seq_length = self._config["data"]["max_sequence_length"]
+        max_tok_length = self._config["data"]["max_token_length"]
+
+        tokens = torch.zeros(max_seq_length, max_tok_length)
+        for i, source_token in json_data["source_tokens"][:max_seq_length]:
+            translated_tokens = self._vocabulary.translate(source_token)[
+                :max_tok_length
             ]
-        )
-        tokens = torch.tensor(tokens)
+            tokens[i, : len(translated_tokens)] = translated_tokens
 
         edges = [
             e
