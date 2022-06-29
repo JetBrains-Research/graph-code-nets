@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytorch_lightning as pl
 from torch.nn import ReLU
 from torch_geometric.nn import Sequential
@@ -9,7 +11,7 @@ import torch
 class GATv2ConvEncoder(pl.LightningModule):
     def __init__(self, in_channels, hidden_channels, num_layers, edge_dim_) -> None:
         super().__init__()
-        modules = []
+        modules: list[Any] = []
         for i in range(num_layers):
             in_channels_ = in_channels if i == 0 else hidden_channels
             modules.append(

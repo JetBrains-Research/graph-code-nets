@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import models.utils as util
 import torch
@@ -26,6 +28,7 @@ class VarMisuseLayer(pl.LightningModule):
         base_config = self._model_config["base"]
         inner_model = self._model_config["configuration"]
         self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
+        self._model: Any  # TODO: replace with a base model
         if inner_model == "rnn":
             self._model = encoder_gru.EncoderGRU(
                 util.join_dicts(base_config, self._model_config["rnn"])
@@ -74,6 +77,8 @@ class VarMisuseLayer(pl.LightningModule):
             predictions = torch.stack(predictions).to(self._device)
             predictions = torch.transpose(self._prediction(predictions), 1, 2)
             return predictions
+        else:
+            raise ValueError(f"Unsupported model configuration: {self._model_config['configuration']}")
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "train_small")

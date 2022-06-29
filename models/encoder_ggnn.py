@@ -12,5 +12,5 @@ class EncoderGGNN(pl.LightningModule):
             out_channels=self._hidden_dim, num_layers=self._num_layers
         )
 
-    def forward(self, x: torch.tensor, edge_index: torch.tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
         return self._ggnn(x, edge_index)

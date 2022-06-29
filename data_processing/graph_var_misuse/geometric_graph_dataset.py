@@ -60,7 +60,7 @@ class GraphDataset(Dataset):
 
     def _parse_line(self, json_data: dict) -> Data:
         # "edges" in input file is list of [before_index, after_index, edge_type, edge_type_name]
-        def _parse_edges(edges: list) -> tuple[torch.tensor, torch.tensor]:
+        def _parse_edges(edges: list) -> tuple[torch.Tensor, torch.Tensor]:
             _edge_index = [[rel[0] for rel in edges], [rel[1] for rel in edges]]
             _edge_attr = [rel[2] for rel in edges]
             return torch.tensor(_edge_index), torch.tensor(_edge_attr)

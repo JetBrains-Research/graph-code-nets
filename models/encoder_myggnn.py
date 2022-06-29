@@ -14,7 +14,7 @@ class EncoderMyGGNN(pl.LightningModule):
             edge_dim=model_config["edge_attr_dim"],
         )
 
-    def forward(
-        self, x: torch.tensor, edge_index: torch.tensor, edge_attr: torch.tensor
+    def forward(  # type: ignore[override]
+        self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor
     ) -> torch.Tensor:
         return self._ggnn(x, edge_index, edge_attr=edge_attr)

@@ -1,14 +1,14 @@
 import pytorch_lightning as pl
 import os
-from data_processing.lightning_graph_dataset import GraphDataset
-from data_processing.vocabulary import Vocabulary
+from data_processing.graph_var_misuse.lightning_graph_dataset import GraphDataset
+from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
 
 
 class GraphDataModule(pl.LightningDataModule):
-    def __init__(self, data_path: str, vocabulary: Vocabulary, config: dict):
+    def __init__(self, data_path: str, vocabulary: GreatVocabulary, config: dict):
         super().__init__()
         self._data_path = os.path.join(data_path)
         self._vocabulary = vocabulary

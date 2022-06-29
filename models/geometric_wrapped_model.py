@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch
 import torch.nn.functional as F
 from models import (
@@ -48,6 +50,7 @@ class VarMisuseLayer(pl.LightningModule):
         base_config = self._model_config["base"]
         inner_model = self._model_config["configuration"]
         self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
+        self._model: Any  # TODO: replace with a base model
         if inner_model == "rnn":
             self._model = encoder_gru.EncoderGRU(
                 join_dicts(base_config, self._model_config["rnn"])

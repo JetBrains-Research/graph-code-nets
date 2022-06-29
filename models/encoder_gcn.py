@@ -5,11 +5,13 @@ from torch_geometric.nn.conv import GCNConv
 from torch import Tensor
 import torch
 
+from typing import Any
+
 
 class GCNEncoder(pl.LightningModule):
     def __init__(self, in_channels, hidden_channels, num_layers) -> None:
         super().__init__()
-        modules = []
+        modules: list[Any] = []
         for i in range(num_layers):
             in_channels_ = in_channels if i == 0 else hidden_channels
             modules.append(

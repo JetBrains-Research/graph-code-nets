@@ -2,7 +2,7 @@ import os
 import json
 from typing import Any
 from torch.utils.data import Dataset
-from data_processing.vocabulary import Vocabulary
+from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from enum import Enum
 from commode_utils.filesystem import get_line_by_offset
 from data_processing.commode_utils_extension import (
@@ -30,7 +30,7 @@ class GraphDataset(Dataset):
     def __init__(
         self,
         data_path: str,
-        vocabulary: Vocabulary,
+        vocabulary: GreatVocabulary,
         config: dict,
         mode: str,
         debug: bool = False,
