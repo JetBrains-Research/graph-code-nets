@@ -62,7 +62,7 @@ class VarMisuseLayer(pl.LightningModule):
             return predictions
 
         elif self._model_config["configuration"] == "ggnn":
-            predictions = list()
+            predictions_list = list()
             for i in range(len(tokens)):
                 test_predictions = self._model(
                     states[i].float(),
@@ -73,8 +73,8 @@ class VarMisuseLayer(pl.LightningModule):
                         ]
                     ).to(self._device),
                 )
-                predictions.append(test_predictions)
-            predictions = torch.stack(predictions).to(self._device)
+                predictions_list.append(test_predictions)
+            predictions = torch.stack(predictions_list).to(self._device)
             predictions = torch.transpose(self._prediction(predictions), 1, 2)
             return predictions
         else:
