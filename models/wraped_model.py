@@ -78,7 +78,9 @@ class VarMisuseLayer(pl.LightningModule):
             predictions = torch.transpose(self._prediction(predictions), 1, 2)
             return predictions
         else:
-            raise ValueError(f"Unsupported model configuration: {self._model_config['configuration']}")
+            raise ValueError(
+                f"Unsupported model configuration: {self._model_config['configuration']}"
+            )
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:  # type: ignore[override]
         return self._shared_eval_step(batch, batch_idx, "train_small")
