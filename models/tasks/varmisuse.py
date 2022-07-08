@@ -2,14 +2,14 @@ from typing import Any
 
 import torch
 import torch.nn.functional as F
-from models import (
-    two_pointer_fcn,
-    encoder_gru,
-    encoder_ggnn,
+from models.decoders import two_pointer_fcn
+from models.encoders.gnn import (
     encoder_gcn,
-    encoder_rggnn,
-    encoder_gatv2conv,
+    encoder_gru,
     encoder_myggnn,
+    encoder_rggnn,
+    encoder_ggnn,
+    encoder_gatv2conv,
 )
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
@@ -22,7 +22,7 @@ from models.utils import (
 )
 
 
-class VarMisuseLayer(pl.LightningModule):
+class VarMisuseModel(pl.LightningModule):
     def __init__(self, config: dict, vocab_dim: int):
         super().__init__()
         self._model_config = config["model"]
@@ -52,15 +52,15 @@ class VarMisuseLayer(pl.LightningModule):
         self._prediction = two_pointer_fcn.TwoPointerFCN(base_config)
         self._model: Any  # TODO: replace with a base model
         if inner_model == "rnn":
-            self._model = encoder_gru.EncoderGRU(
+            self._model = encoder_gru.GRUEncoder(
                 join_dicts(base_config, self._model_config["rnn"])
             )
         elif inner_model == "ggnn":
-            self._model = encoder_ggnn.EncoderGGNN(
+            self._model = encoder_ggnn.GGNNEncoder(
                 join_dicts(base_config, self._model_config["ggnn"])
             )
         elif inner_model == "gcn":
-            self._model = encoder_gcn.EncoderGCN(
+            self._model = encoder_gcn.GCNEncoder(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gcn"]["num_layers"],
@@ -72,14 +72,14 @@ class VarMisuseLayer(pl.LightningModule):
                 self._model_config["rggnn"]["num_layers"],
             )
         elif inner_model == "gatv2conv":
-            self._model = encoder_gatv2conv.GATv2ConvEncoder(
+            self._model = encoder_gatv2conv.TransConvEncoder(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gatv2conv"]["num_layers"],
                 self._model_config["base"]["edge_attr_dim"],
             )
         elif inner_model == "myggnn":
-            self._model = encoder_myggnn.EncoderMyGGNN(
+            self._model = encoder_myggnn.TypedGGNNEncoder(
                 join_dicts(base_config, self._model_config["ggnn"])
             )
         else:

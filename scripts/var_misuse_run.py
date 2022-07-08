@@ -3,7 +3,7 @@ import numpy as np
 import random
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from models.geometric_wrapped_model import VarMisuseLayer
+from models.tasks.varmisuse import VarMisuseModel
 import yaml
 from data_processing.vocabulary.great_vocabulary import GreatVocabulary
 from data_processing.graph_var_misuse import geometric_graph_data_loader
@@ -28,7 +28,7 @@ data = geometric_graph_data_loader.GraphDataModule(data_path, vocab, config)
 data.prepare_data()
 data.setup("fit")
 # data.setup("test")
-model = VarMisuseLayer(config, vocab.vocab_dim)
+model = VarMisuseModel(config, vocab.vocab_dim)
 
 wandb_logger = WandbLogger(project="graph-nets-test")
 checkpoint_callback = ModelCheckpoint(dirpath="checkpoint/varmisuse/")

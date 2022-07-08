@@ -13,7 +13,7 @@ from torch_geometric.utils import to_dense_batch
 
 from data_processing.vocabulary.vocabulary import Vocabulary
 from models.gcn_encoder import GCNEncoder
-from models.transformer_decoder import GraphTransformerDecoder
+from models.decoders.decoder_transformer import GraphTransformerDecoder
 from models.utils import generate_padding_mask
 
 

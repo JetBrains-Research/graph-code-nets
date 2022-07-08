@@ -3,7 +3,7 @@ import torch
 from my_models import GGNNTypedEdges
 
 
-class EncoderMyGGNN(pl.LightningModule):
+class TypedGGNNEncoder(pl.LightningModule):
     def __init__(self, model_config: dict):
         super().__init__()
         self._hidden_dim = model_config["hidden_dim"]

@@ -3,7 +3,7 @@ import torch
 from torch_geometric.nn.conv import GatedGraphConv
 
 
-class EncoderGGNN(pl.LightningModule):
+class GGNNEncoder(pl.LightningModule):
     def __init__(self, model_config: dict):
         super().__init__()
         self._hidden_dim = model_config["hidden_dim"]
