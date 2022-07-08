@@ -8,7 +8,7 @@ import torch
 from typing import Any
 
 
-class GCNEncoder(pl.LightningModule):
+class EncoderGCN(pl.LightningModule):
     def __init__(self, in_channels, hidden_channels, num_layers) -> None:
         super().__init__()
         modules: list[Any] = []

@@ -60,7 +60,7 @@ class VarMisuseLayer(pl.LightningModule):
                 join_dicts(base_config, self._model_config["ggnn"])
             )
         elif inner_model == "gcn":
-            self._model = encoder_gcn.GCNEncoder(
+            self._model = encoder_gcn.EncoderGCN(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gcn"]["num_layers"],
