@@ -4,7 +4,6 @@ from .encoders.gnn import (
     TransformerConvEncoder,
     GCNEncoder,
     GGNNEncoder,
-    GRUEncoder,
     TypedGGNNEncoder,
 )
 from .tasks import VarMisuseModel, VarNamingModel

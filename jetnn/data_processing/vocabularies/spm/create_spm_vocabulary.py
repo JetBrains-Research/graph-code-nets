@@ -1,6 +1,6 @@
 import argparse
 
-from jetnn.data_processing.vocabulary.spm_vocabulary import SPMVocabularyTrainer
+from jetnn.data_processing.vocabularies.spm.spm_vocabulary import SPMVocabularyTrainer
 
 
 def main():

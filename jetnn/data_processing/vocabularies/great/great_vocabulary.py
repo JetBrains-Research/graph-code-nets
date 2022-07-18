@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from jetnn.data_processing.vocabulary.vocabulary import Vocabulary
+from jetnn.data_processing.vocabularies.vocabulary import Vocabulary
 
 
 class GreatVocabulary(Vocabulary):

@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 import os
 from jetnn.data_processing.graph_var_misuse.geometric_graph_dataset import GraphDataset
-from jetnn.data_processing.vocabulary.great_vocabulary import GreatVocabulary
+from jetnn.data_processing.vocabularies.great.great_vocabulary import GreatVocabulary
 from torch_geometric.loader import DataLoader
 
 

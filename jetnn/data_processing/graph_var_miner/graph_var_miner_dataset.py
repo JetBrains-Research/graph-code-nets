@@ -10,7 +10,7 @@ import torch
 from torch_geometric.data import Data, Dataset
 from tqdm import tqdm
 
-from jetnn.data_processing.vocabulary.vocabulary import Vocabulary
+from jetnn.data_processing.vocabularies.vocabulary import Vocabulary
 
 _graph_var_miner_edge_types = [
     "NextToken",

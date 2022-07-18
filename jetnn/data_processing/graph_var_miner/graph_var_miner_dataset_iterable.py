@@ -11,7 +11,7 @@ import torch
 from torch.utils.data import IterableDataset
 from torch_geometric.data import Data, Dataset
 
-from jetnn.data_processing.vocabulary.vocabulary import Vocabulary
+from jetnn.data_processing.vocabularies.vocabulary import Vocabulary
 from jetnn.downloaders.download_varnaming_dataset import download_from_google_drive
 
 _graph_var_miner_edge_types = [

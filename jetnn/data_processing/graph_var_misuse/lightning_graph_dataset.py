@@ -2,7 +2,7 @@ import os
 import json
 from typing import Any
 from torch.utils.data import Dataset
-from jetnn.data_processing.vocabulary.great_vocabulary import GreatVocabulary
+from jetnn.data_processing.vocabularies.great.great_vocabulary import GreatVocabulary
 from enum import Enum
 from commode_utils.filesystem import get_line_by_offset
 from jetnn.data_processing.commode_utils_extension import (

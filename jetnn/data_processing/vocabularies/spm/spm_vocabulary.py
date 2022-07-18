@@ -7,7 +7,7 @@ from typing import Iterable, Union
 import ijson
 import sentencepiece as spm
 
-from jetnn.data_processing.vocabulary.vocabulary import Vocabulary
+from jetnn.data_processing.vocabularies.vocabulary import Vocabulary
 
 
 class SPMVocabularyTrainer:

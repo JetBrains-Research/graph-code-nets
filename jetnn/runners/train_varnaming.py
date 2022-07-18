@@ -12,8 +12,8 @@ from pytorch_lightning.loggers import WandbLogger
 from jetnn.data_processing.graph_var_miner.graph_var_miner_dataloader import (
     GraphVarMinerModule,
 )
-from jetnn.data_processing.vocabulary.great_vocabulary import GreatVocabulary
-from jetnn.data_processing.vocabulary.spm_vocabulary import SPMVocabulary
+from jetnn.data_processing.vocabularies.great.great_vocabulary import GreatVocabulary
+from jetnn.data_processing.vocabularies.spm.spm_vocabulary import SPMVocabulary
 from jetnn.models import VarNamingModel
 
 import wandb

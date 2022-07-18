@@ -7,8 +7,8 @@ from multiprocessing import Pool
 
 import ijson
 
-from jetnn.data_processing.vocabulary.great_vocabulary import GreatVocabulary
-from jetnn.data_processing.vocabulary.spm_vocabulary import SPMVocabulary
+from jetnn.data_processing.vocabularies.great.great_vocabulary import GreatVocabulary
+from jetnn.data_processing.vocabularies.spm.spm_vocabulary import SPMVocabulary
 
 
 # inplace

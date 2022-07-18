@@ -9,7 +9,7 @@ from torch_geometric.loader import DataLoader
 from jetnn.data_processing.graph_var_miner.graph_var_miner_dataset_iterable import (
     GraphVarMinerDatasetIterable,
 )
-from jetnn.data_processing.vocabulary.vocabulary import Vocabulary
+from jetnn.data_processing.vocabularies.vocabulary import Vocabulary
 
 
 class GraphVarMinerModule(pl.LightningDataModule):

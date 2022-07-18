@@ -11,7 +11,7 @@ from torch.nn import Transformer
 from torch_geometric.data import Batch
 from torch_geometric.utils import to_dense_batch
 
-from jetnn.data_processing.vocabulary.vocabulary import Vocabulary
+from jetnn.data_processing.vocabularies.vocabulary import Vocabulary
 from jetnn.models.gcn_encoder import GCNEncoder
 from jetnn.models.decoders.decoder_transformer import GraphTransformerDecoder
 from jetnn.models.utils import generate_padding_mask

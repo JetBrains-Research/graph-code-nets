@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from jetnn.models.tasks.varmisuse import VarMisuseModel
 import yaml
-from jetnn.data_processing.vocabulary.great_vocabulary import GreatVocabulary
+from jetnn.data_processing.vocabularies.great.great_vocabulary import GreatVocabulary
 from jetnn.data_processing.graph_var_misuse import geometric_graph_data_loader
 from pytorch_lightning.loggers import WandbLogger
 import argparse
