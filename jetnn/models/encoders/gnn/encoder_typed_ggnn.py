@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 import torch
-from jetnn.models.encoders.gnn.custom_convs import typed_ggnn
+from .custom_convs import TypedGGNNConv
 
 
 class TypedGGNNEncoder(pl.LightningModule):
@@ -8,7 +8,7 @@ class TypedGGNNEncoder(pl.LightningModule):
         super().__init__()
         self._hidden_dim = model_config["hidden_dim"]
         self._num_layers = model_config["num_layers"]
-        self._ggnn = GGNNTypedEdges.TypedGGNNConv(
+        self._ggnn = TypedGGNNConv(
             out_channels=self._hidden_dim,
             num_layers=self._num_layers,
             edge_dim=model_config["edge_attr_dim"],

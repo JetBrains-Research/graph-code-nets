@@ -1,7 +1,7 @@
 from .decoders import GraphTransformerDecoder, TwoPointerFCN
 from .encoders.gnn import (
     RGGNNEncoder,
-    TransConvEncoder,
+    TransformerConvEncoder,
     GCNEncoder,
     GGNNEncoder,
     GRUEncoder,

@@ -13,7 +13,6 @@ from torch_geometric.nn.inits import uniform
 
 
 class TypedGGNNConv(MessagePassing):
-
     def __init__(
         self,
         out_channels: int,

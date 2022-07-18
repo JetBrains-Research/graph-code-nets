@@ -8,7 +8,7 @@ from torch import Tensor
 import torch
 
 
-class TransConvEncoder(pl.LightningModule):
+class TransformerConvEncoder(pl.LightningModule):
     def __init__(self, in_channels, hidden_channels, num_layers, edge_dim_) -> None:
         super().__init__()
         modules: list[Any] = []

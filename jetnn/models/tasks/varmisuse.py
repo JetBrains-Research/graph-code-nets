@@ -5,9 +5,10 @@ import torch.nn.functional as F
 from jetnn.models.decoders import two_pointer_fcn
 from jetnn.models.encoders.gnn import (
     encoder_gcn,
-    encoder_myggnn,
+    encoder_typed_ggnn,
 )
-from jetnn.models.encoders.gnn import encoder_gru, encoder_rggnn, encoder_ggnn, encoder_gatv2conv
+from jetnn.models.encoders.gnn import encoder_rggnn, encoder_ggnn
+from jetnn.models.encoders.sequential import encoder_gru
 import pytorch_lightning as pl
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.data import Data
@@ -69,7 +70,7 @@ class VarMisuseModel(pl.LightningModule):
                 self._model_config["rggnn"]["num_layers"],
             )
         elif inner_model == "gatv2conv":
-            self._model = encoder_gatv2conv.TransConvEncoder(
+            self._model = encoder_gatv2conv.TransformerConvEncoder(
                 -1,
                 self._model_config["base"]["hidden_dim"],
                 self._model_config["gatv2conv"]["num_layers"],
